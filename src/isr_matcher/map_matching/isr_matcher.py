@@ -422,12 +422,6 @@ class ISRMatcher:
             ax.set_ylabel('Geschwindigkeit [km/h]')
             ax.legend()
             plt.savefig(self.export_path / 'velocity_ms.png')
-            try:
-                import tikzplotlib
-
-                tikzplotlib.save(self.export_path / "velocity_ms.tex")
-            except:
-                pass
             plt.close()
 
             # inclines
@@ -442,12 +436,6 @@ class ISRMatcher:
             ax.set_xlabel('Fahrweg [km]')
             ax.set_ylabel('Steigung [‰]')
             plt.savefig(self.export_path / 'inclines_promille.png')
-            try:
-                import tikzplotlib
-
-                tikzplotlib.save(self.export_path / "inclines_promille.tex")
-            except:
-                pass
             plt.close()
 
             # height
@@ -461,12 +449,6 @@ class ISRMatcher:
             ax.set_xlabel('Fahrweg [km]')
             ax.set_ylabel('Höhe [m]')
             plt.savefig(self.export_path / 'altitude_m.png')
-            try:
-                import tikzplotlib
-
-                tikzplotlib.save(self.export_path / "altitude_m.tex")
-            except:
-                pass
             plt.close()
 
             # acceleration
@@ -483,12 +465,6 @@ class ISRMatcher:
             ax.set_ylabel('Beschleunigung [m/s^2]')
             ax.legend()
             plt.savefig(self.export_path / 'acceleration_ms2.png')
-            try:
-                import tikzplotlib
-
-                tikzplotlib.save(self.export_path / "acceleration_ms2.tex")
-            except:
-                pass
             plt.close()
 
         return df_results, df_incline_and_height_profile, df_path, route_dict, self.map
