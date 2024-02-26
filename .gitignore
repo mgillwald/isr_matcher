@@ -1,0 +1,5 @@
+*__pycache__*
+cache/operational_points/*.json
+cache/track_segments/*.pickle
+cache/track_segments_continued/*.pickle
+*pytest_cache*
