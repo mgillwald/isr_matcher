@@ -37,7 +37,9 @@ Marco Gillwald ([marco.gillwald@gmx.de](marco.gillwald@gmx.de) / [mgillwald](htt
 
 ## Version History
 
-* 0.1
+* 0.0.2
+    * Readme added
+* 0.0.1
     * Initial Release
 
 ## License
