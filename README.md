@@ -33,7 +33,7 @@ Coming Soon
 
 ## Authors
 
-[@Marco Gillwald](marco.gillwald@gmx.de)
+Marco Gillwald ([marco.gillwald@gmx.de](marco.gillwald@gmx.de) / [mgillwald](https://github.com/mgillwald))
 
 ## Version History
 
