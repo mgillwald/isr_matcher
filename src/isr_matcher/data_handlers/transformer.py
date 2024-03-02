@@ -8,10 +8,31 @@ T = TypeVar("T", bound="BaseGeometry")
 
 
 class Transformer:
-    """TODO"""
+    """Initializes a Transformer object with the specified source and target coordinate systems.
+
+    This class facilitates coordinate system transformations between the specified source and target coordinate systems.
+
+    Attributes
+    ----------
+    _source : str
+        The name of the source coordinate system.
+    _target : str
+        The name of the target coordinate system.
+    _projection_from_source_to_target : callable
+        A callable function for transforming coordinates from the source to the target coordinate system.
+    _projection_from_target_to_source : callable
+        A callable function for transforming coordinates from the target to the source coordinate system.
+    """
 
     def __init__(self, source_cs: str, target_cs: str):
-        """TODO"""
+        """Initializes Transformer instance.
+
+        Parameters
+        ----------
+        source_cs : str
+            The source coordinate system as EPSG code.
+        target_cs : str
+            The target coordinate system as EPSG code."""
         # check if cs exist
         # TODO
 

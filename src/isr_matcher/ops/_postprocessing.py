@@ -27,17 +27,53 @@ logger = logging.getLogger(__name__)
 
 
 class MMPostprocessor:
+    """Postprocesses the results of a map matching..
+
+    Attributes
+    ----------
+    _map : Map
+        The map.
+
+    """
+
     def __init__(self, map_: Map):
         self._map = map_
 
     @property
     def map(self) -> Map:
+        """
+        Initializes an MMPostprocessor object with the specified map.
+
+        Parameters
+        ----------
+        map_ : Map
+            The map.
+        """
         return self._map
 
     def concatenate_rails(
-        self, S: list[int], start_point: Point, end_point: Point, resolution_m: float = 5, interpol: bool = False
+        self, S: list[int], start_point: Point, end_point: Point, resolution_m: float = 5
     ) -> LineString:
-        """"""
+        """Concatenates rail segments to form a continuous path.
+
+        Parameters
+        ----------
+        S : list[int]
+            List of rail indices.
+        start_point : Point
+            Starting point of the path.
+        end_point : Point
+            Ending point of the path.
+        resolution_m : float, optional
+            Resolution for spline interpolation in meters, by default 5.
+        interpol : bool, optional
+            Flag indicating whether to perform spline interpolation, by default False.
+
+        Returns
+        -------
+        LineString
+            A LineString representing the concatenated rail segments forming a continuous path.
+        """
 
         path_by_index: list[int] = np.array(S)[np.concatenate(([True], np.diff(S) != 0))].tolist()
         path_by_rails: list[Rail] = [self.map['rails'][s] for s in path_by_index]
@@ -136,19 +172,19 @@ class MMPostprocessor:
 
     @staticmethod
     def join(line: LineString | Rail, other: LineString | Rail) -> LineString:
-        """Implements concatenation of rails into one path by connecting them by spline interpolation.
+        """Concatenates two LineString or Rail instances into one LineString.
 
         Parameters
         ----------
         line: LineString | Rail
-            An instance
-        other: Rail
-            Another instance of class Rail.
+            First LineString or Rail instance.
+        other: LineString | Rail
+            Second LineString or Rail instance.
 
-        Note
-        ----
-
-
+        Returns
+        -------
+        LineString
+            Concatenated LineString formed by joining the two input LineStrings or Rails.
         """
 
         line1 = line
@@ -176,42 +212,6 @@ class MMPostprocessor:
 
         else:
             return LineString(list(line1.coords) + list(line2.coords))
-
-        # connect lines
-        s_length = 30  # length to cut off from end of first line
-        if line1.length - s_length > 0:
-            split_point = line1.interpolate(distance=line1.length - s_length)  # compute split point
-            split_line_1, split_line_2 = split_line_at_point(
-                line=line1, point=split_point
-            )  # split first line (cut off end of line)
-            result_line = LineString(list(split_line_1.coords) + list(line2.coords))  # connect lines
-        else:
-            result_line = LineString(
-                line1.coords[:1] + list(line2.coords)
-            )  # connect first point of first line with second line
-
-        # iterate over resulting line to assert no hard angles
-        result_line_coords = result_line.coords[:1]
-        angles = []
-        for i in range(1, len(result_line.coords) - 1):
-            v1 = np.array(result_line.coords[i]) - np.array(result_line.coords[i - 1])
-            v2 = np.array(result_line.coords[i + 1]) - np.array(result_line.coords[i])
-            angle = angle_between(v1, v2)
-
-            if angle < 30:
-                angles.append(angle)
-                result_line_coords.append(result_line.coords[i])
-
-        result_line_coords.append(result_line.coords[-1])
-        result_line = LineString(result_line_coords)
-
-        # f, ax = plt.subplots(1, 1)
-        # ax.plot(*line1.xy)
-        # ax.plot(*line2.xy)
-        # ax.plot(*result_line.xy)
-        # plt.show()
-
-        return result_line
 
     def compute_position_parameter(self, path: LineString, rail_sequence: list[Rail], gnss_coords: list[Point]):
         """
@@ -295,13 +295,7 @@ class MMPostprocessor:
                         km_running = (
                             abs(path.project(matched_points_utm[i]) - path.project(matched_points_utm[i - 1])) / 1000
                         )
-                        # if km_running > 2:
-                        #    import matplotlib.pyplot as plt
-                        #    f, ax = plt.subplots(1, 1)
-                        #    ax.plot(*path.xy, color='k')
-                        #    ax.scatter(matched_points_utm[i-1].x, matched_points_utm[i-1].y)
-                        #    ax.scatter(matched_points_utm[i].x, matched_points_utm[i].y)
-                        #    plt.show()
+
                         kms_running.append(kms_running[-1] + km_running)
 
                         # the rest just to get the direction...
@@ -383,7 +377,24 @@ class MMPostprocessor:
         return position_parameter_dict
 
     def compute_track_segment_sequence(self, rail_sequence: list[Rail]) -> Tuple[list[TrackSegment], list[int]]:
-        """Computes the track segment sequence given a sequence of rails."""
+        """Computes the track segment sequence given a sequence of rails.
+
+        Parameters
+        ----------
+        rail_sequence: list[Rail]
+            A sequence of rails.
+
+        Returns
+        -------
+        Tuple[list[TrackSegment], list[int]]
+            A tuple containing the list of track segments corresponding to the input rail sequence
+            and the indices of the rails in the input sequence that match the track segments.
+
+        Raises
+        ------
+        ValueError
+            If a rail cannot be matched with a track segment.
+        """
 
         # lists
         track_segment_sequence = []
@@ -421,7 +432,34 @@ class MMPostprocessor:
         rail_sequence: list[Rail],
         position_dict: dict,
     ):
-        """TODO"""
+        """Computes the incline profile along a given path based on railway infrastructure data and GNSS coordinates.
+
+        Parameters
+        ----------
+        path : LineString
+            The path along which to compute the incline profile.
+        gnss_coords_utm : list[Point]
+            The GNSS coordinates as a list of Point objects.
+        track_segment_sequence : list[TrackSegment]
+            The sequence of track segments corresponding to the rail sequence.
+        track_segment_indices : list[int]
+            The indices of the rails in the input sequence that match the track segments.
+        rail_sequence : list[Rail]
+            The sequence of rails.
+        position_dict : dict
+            A dictionary containing position information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the incline profile with keys 'kms' for the distances in kilometers,
+            'inclines' for the corresponding inclines, and 'track_segment_names' for the names of the track segments.
+
+        Raises
+        ------
+        ValueError
+            If the direction cannot be determined.
+        """
 
         # inclines at kilometrage values
 
@@ -585,7 +623,23 @@ class MMPostprocessor:
     def split_into_subgroups_by_nan(
         kms: list[float], inclines: list[float], track_segment_names: list[str]
     ) -> Tuple[list[list[float]], list[list[float]], list[list[str]]]:
-        """Splits kilometer values and inclines from incline profile into subgroups based on nan-values in inclines."""
+        """Splits kilometer values and inclines from incline profile into subgroups based on nan-values in inclines.
+
+        Parameters
+        ----------
+        kms : list[float]
+            The list of kilometer values.
+        inclines : list[float]
+            The list of inclines.
+        track_segment_names : list[str]
+            The list of track segment names.
+
+        Returns
+        -------
+        Tuple[list[list[float]], list[list[float]], list[list[str]]]
+            A tuple containing three lists: kms_splitted, inc_splitted, and tsn_splitted.
+            Each list contains subgroups of kilometer values, inclines, and track segment names, respectively.
+        """
 
         kms_splitted = []
         inc_splitted = []
@@ -746,7 +800,20 @@ class MMPostprocessor:
     def velocity_from_gnss(
         self, kms_running: list[float], gnss: GNSSSeries, incline_profile: dict, correct_velocity: bool = True
     ) -> list[float]:
-        """TODO"""
+        """Computes the height profile given the incline profile and track segment sequence.
+
+        Parameters
+        ----------
+        incline_profile : dict
+            The incline profile dictionary with keys 'kms', 'inclines', and 'track_segment_names'.
+        track_segment_sequence : list[TrackSegment]
+            The sequence of track segments.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the height and incline profiles with keys 'inclines', 'height', and 'kms'.
+        """
 
         inclines = incline_profile['inclines']
         kms = incline_profile['kms']
@@ -797,7 +864,20 @@ class MMPostprocessor:
         return velocity_filtered_kmh
 
     def acceleration_from_gnss_and_velocity(self, gnss: GNSSSeries, velocity_ms: list[float]) -> list[float]:
-        """TODO"""
+        """Computes acceleration from GNSS data and velocity.
+
+        Parameters
+        ----------
+        gnss : GNSSSeries
+            GNSS data series.
+        velocity_ms : list[float]
+            Velocity in meters per second.
+
+        Returns
+        -------
+        list[float]
+            Acceleration in meters per second squared.
+        """
 
         # acceleration_over_path
         dt_avg = np.mean(np.diff(gnss.time_s))
@@ -914,7 +994,22 @@ class MMPostprocessor:
         name=None,
         return_map=False,
     ):
-        """"""
+        """Adds GPS series data to a Folium map.
+
+        Parameters
+        ----------
+        m : folium.Map
+            The Folium map object.
+        gps : np.ndarray
+            The GPS coordinates.
+        df : pd.DataFrame
+            The DataFrame containing GPS data.
+
+        Returns
+        -------
+        folium.Map | None
+            If return_map is True, returns a folium.Map instance, else it returns None.
+        """
         # coordinate sequence
         coordinate_sequence = [(p[0], p[1]) for p in gps_routed]
 
@@ -1043,7 +1138,26 @@ class MMPostprocessor:
     def map_matching_results_to_map(
         df: pd.DataFrame, export_path: Path, df_path: pd.DataFrame, map_: Map | None = None, return_map: bool = False
     ) -> None | folium.Map:
-        """TODO"""
+        """Adds map matching results to a Folium map.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            The DataFrame containing map matching results.
+        export_path : Path
+            The path where the map will be exported.
+        df_path : pd.DataFrame
+            The DataFrame containing path data.
+        map_ : Map | None, optional
+            The map object to add ISR lines, by default None.
+        return_map : bool, optional
+            Whether to return the map object, by default False.
+
+        Returns
+        -------
+        None | folium.Map
+            None if return_map is False, otherwise the Folium map object.
+        """
 
         # create map
         m = folium.Map(
@@ -1085,6 +1199,22 @@ class MMPostprocessor:
 
     @staticmethod
     def add_isr_lines_to_map(m: folium.Map, isr_map: Map, return_map: bool = False):
+        """Adds ISR lines and operational points to a Folium map.
+
+        Parameters
+        ----------
+        m : folium.Map
+            The Folium map object.
+        isr_map : Map
+            The ISR map containing rails and operational points.
+        return_map : bool, optional
+            Whether to return the map object, by default False.
+
+        Returns
+        -------
+        None | folium.Map
+            None if return_map is False, otherwise the Folium map object.
+        """
         colors = [
             'red',
             #           'blue',

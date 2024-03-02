@@ -46,6 +46,23 @@ class Kilometrage:
     """
 
     def __init__(self, km_lines: list[list[LineString]], enhance_kilometrage: bool = True):
+        """
+        Initialize a Kilometrage object.
+
+        Parameters:
+        -----------
+        km_lines : list[list[LineString]]
+            List of LineStrings representing the kilometrage line(s).
+        enhance_kilometrage : bool, optional
+            Flag indicating whether to enhance kilometrage computation, by default True.
+
+        Raises:
+        -------
+        ValueError
+            If the number of lines is not exactly one or two.
+        TypeError
+            If the first element of the first list has a wrong type.
+        """
         # verify input
         if len(km_lines) != 1 and len(km_lines) != 2:
             raise ValueError(

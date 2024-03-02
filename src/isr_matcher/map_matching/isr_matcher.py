@@ -30,7 +30,24 @@ logger = logging.getLogger(__name__)
 class ISRMatcher:
     """Class that handles map matching of GNSS time series to ISR map data.
 
-    This is a high level class leveraging serveral other classes to handle the whole map matching process. It wraps and handles GNSS and map preprocessing (MMPreprocessor), map matching (HMM) and post analysis (TBD).
+    This is a high-level class leveraging several other classes to handle the whole map matching process. It wraps and handles GNSS and map preprocessing (MMPreprocessor), map matching (HMM), and post-analysis (TBD).
+
+    Attributes
+    ----------
+    _project_path : Path
+        Path to the root of the project.
+    _r_boundary : float
+        Radius for boundary.
+    _r_candidates : float
+        Radius for rail candidates (around each measurement point).
+    export_path : Path
+        Path to export the results.
+    export_results : bool
+        Determines whether to export the results.
+    _preprocessor : MMPreprocessor
+        Preprocessor instance for map and GNSS data.
+    _postprocessor : MMPostprocessor
+        Postprocessor instance for map data.
     """
 
     def __init__(
@@ -43,7 +60,25 @@ class ISRMatcher:
         enhance_kilometrage: bool = True,
         cache_preprocessed_segments: bool = True,
     ):
-        """TODO"""
+        """Initializes the ISRMatcher class.
+
+        Parameters
+        ----------
+        gnss_series : GNSSSeries
+            The GNSS time series data.
+        export_path : Path | str | None
+            Path to export the results.
+        r_boundary : float, optional
+            Radius for boundary, by default 1500.0.
+        r_candidates : float, optional
+            Radius for rail candidates (around each measurement point), by default 200.0.
+        export_results : bool, optional
+            Determines whether to export the results, by default True.
+        enhance_kilometrage : bool, optional
+            Determines whether to enhance kilometrage, by default True.
+        cache_preprocessed_segments : bool, optional
+            Determines whether to cache preprocessed segments, by default True.
+        """
 
         self._project_path = Path(__file__).parent.parent.parent.parent  # path to root of project
         self._r_boundary = r_boundary  # radius for boundary
@@ -149,7 +184,21 @@ class ISRMatcher:
         average_low_velocity: bool = True,
         threshold_velocity: float = 3.0,
     ):
-        """Preprocesses GNSS series."""
+        """Preprocesses GNSS series.
+
+        Parameters
+        ----------
+        sigma : float | ArrayLike | None, optional
+            Standard deviation of the noise. If None, it will be estimated, by default None.
+        sigma_method : {'std', 'mad'}, optional
+            Method to estimate sigma, by default 'std'.
+        prune : float | {'auto'} | None, optional
+            Prune parameter, by default None.
+        average_low_velocity : bool, optional
+            Determines whether to average low velocity measurements, by default True.
+        threshold_velocity : float, optional
+            Threshold velocity, by default 3.0.
+        """
 
         # average low velocity measurement
         if average_low_velocity and not isinstance(self.gnss.velocity_ms, type(None)):
@@ -186,7 +235,32 @@ class ISRMatcher:
         correct_velocity: bool = True,
         create_plots: bool = True,
     ) -> int:
-        """TODO"""
+        """Matches GNSS data to the map and computes various parameters.
+
+        This method preprocesses the GNSS series and map data, constructs a Hidden Markov Model based on the preprocessed data, computes the optimal state sequence, and then computes various parameters such as position, incline, height, velocity, and acceleration profiles. It also exports the results to CSV files and generates plots if specified.
+
+        Parameters
+        ----------
+        sigma : float | ArrayLike | None, optional
+            Standard deviation of the noise, by default None.
+        prune : float | {'auto'} | None, optional
+            Prune parameter, by default None.
+        sigma_method : {'std', 'mad'}, optional
+            Method to estimate sigma, by default 'std'.
+        average_low_velocity : bool, optional
+            Determines whether to average low velocity measurements, by default True.
+        threshold_velocity : float, optional
+            Threshold velocity, by default 3.0.
+        correct_velocity : bool, optional
+            Determines whether to correct velocity, by default True.
+        create_plots : bool, optional
+            Determines whether to create plots, by default True.
+
+        Returns
+        -------
+        int
+            Returns 0 upon successful completion.
+        """
 
         logger.info('Preprocessing GNSS series...')
         # preprocess: gnss
@@ -502,7 +576,20 @@ class ISRMatcher:
 
     @staticmethod
     def prune_position_dict(position_dict: dict, index: list[int]) -> dict:
-        """Prunes entries on position dict according to index."""
+        """Prunes entries on position dict according to index.
+
+        Parameters
+        ----------
+        position_dict : dict
+            Dictionary containing positional data.
+        index : list[int]
+            List of indices to prune.
+
+        Returns
+        -------
+        dict
+            Pruned position dictionary.
+        """
 
         for key in position_dict.keys():
             position_dict[key] = np.delete(position_dict[key], index)

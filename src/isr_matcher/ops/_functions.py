@@ -599,7 +599,23 @@ def angle_between(v1: Annotated[ArrayLike, dtype(float)], v2: Annotated[ArrayLik
 def interpolate_point_between(
     point1: Tuple[float, float], point2: Tuple[float, float], normalized_distance: float = 0.5
 ) -> Tuple[float, float]:
-    """TODO"""
+    """
+    Interpolate a point between two given points.
+
+    Parameters:
+    -----------
+    point1 : Tuple[float, float]
+        The coordinates of the first point.
+    point2 : Tuple[float, float]
+        The coordinates of the second point.
+    normalized_distance : float, optional
+        The normalized distance between the two points where the interpolated point lies, default is 0.5 (midpoint).
+
+    Returns:
+    --------
+    Tuple[float, float]
+        The interpolated point coordinates.
+    """
     # points as arrays
     first_point = np.array(point1, dtype=float)
     last_point = np.array(point2, dtype=float)

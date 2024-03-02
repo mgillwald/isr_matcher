@@ -51,7 +51,57 @@ logger = logging.getLogger(__name__)
 
 
 class TrackSegment:
-    """TODO"""
+    """Stores information about a track segment and handles processing of track segment.
+
+    This class provides methods to read supplementary kilometrage information and preprocess track segments. It computes layout of rails, rail instances, incline, kilometrage lines, and handles caching.
+
+    Attributes
+    ----------
+    track_km_dict : dict
+        Dictionary containing supplementary kilometrage information.
+    track_length_dict : dict
+        Dictionary containing supplementary track length information.
+    _properties : dict
+        Properties of the track segment.
+    _properties_2 : dict or None
+        Additional properties of the track segment.
+    _properties_info : dict
+        Information about the properties.
+    _operational_point_from : OperationalPoint
+        Starting operational point of the track segment.
+    _operational_point_to : OperationalPoint
+        Ending operational point of the track segment.
+    _km_from : float
+        Kilometer from which the track segment starts.
+    _km_to : float
+        Kilometer at which the track segment ends.
+    _length : float
+        Length of the track segment.
+    _id : int
+        Identifier of the track segment.
+    _name : str
+        Name of the track segment.
+    _track_nr : int
+        Track number of the track segment.
+    _n_km_lines : int
+        Number of kilometrage lines.
+    _lines : list
+        List of lines representing the track segment.
+    _enhance_kilometrage : bool
+        Flag indicating whether to enhance kilometrage.
+    _allow_previous : bool
+        Flag indicating whether to allow previous track segments.
+    project_path : Path
+        Path to the project directory.
+    cache_path : Path
+        Path to the cache directory.
+    _layout : dict
+        Layout of the track segment.
+    _rails : list
+        List of rail instances.
+    _incline_dict : dict
+        Dictionary containing incline information.
+    """
 
     @staticmethod
     def read_track_km_dict():
@@ -92,6 +142,30 @@ class TrackSegment:
         allow_previous: bool = True,
         cache_preprocessed_segments: bool = True,
     ):
+        """Initialize a TrackSegment object.
+
+        Parameters
+        ----------
+        lines : list[LineString]
+            List of LineString objects representing the track segment.
+        properties : Dict[str, Union[str, float, int]]
+            Properties of the track segment.
+        properties_2 : Dict[str, Union[str, float, int]] or None
+            Additional properties of the track segment.
+        properties_info : Dict[str, Tuple[str, str]]
+            Information about the properties.
+        operational_point_from : OperationalPoint
+            Starting operational point of the track segment.
+        operational_point_to : OperationalPoint
+            Ending operational point of the track segment.
+        enhance_kilometrage : bool, optional
+            Flag indicating whether to enhance kilometrage, by default True.
+        allow_previous : bool, optional
+            Flag indicating whether to allow previous track segments in kilometrage computation, by default True.
+        cache_preprocessed_segments : bool, optional
+            Flag indicating whether to cache preprocessed segments, by default True.
+        """
+
         # set attributes
         self._properties = deepcopy(properties)
         self._properties_2 = deepcopy(properties_2)

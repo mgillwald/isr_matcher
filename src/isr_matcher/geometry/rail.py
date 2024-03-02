@@ -15,7 +15,15 @@ from isr_matcher.data_handlers.transformer import Transformer
 
 
 class Rail(LineString):
-    """TODO"""
+    """Represents a rail. Inherits from LineString so shapely functions can be used on instances directly.
+
+    Attributes
+    ----------
+    _id_to_attrs : dict
+        Dictionary mapping ID to attributes.
+    __slots__ : tuple
+        Slots for assigning __class__.
+    """
 
     _id_to_attrs = {}
     __slots__ = (
@@ -25,6 +33,23 @@ class Rail(LineString):
     def __init__(
         self, coords: Tuple[float, float], lines_c: list, layout: dict, name: str, track: int, index: int | None = None
     ):
+        """Initializes a Rail object.
+
+        Parameters
+        ----------
+        coords : Tuple[float, float]
+            Coordinates of the rail.
+        lines_c : list
+            List of lines.
+        layout : dict
+            Dictionary containing layout information.
+        name : str
+            Name of the rail.
+        track : int
+            Track number.
+        index : int, optional
+            Index of the rail, by default None
+        """
         # get lines in direction from track segment
         lines = [LineString(coords) for coords in lines_c]
         lines_1 = [lines[i] for i in range(len(lines)) if i in layout['direction_1_rails']]
@@ -48,6 +73,28 @@ class Rail(LineString):
     def __new__(
         cls, coords: Tuple[float, float], lines_c: list, layout: dict, name: str, track: int, index: int | None = None
     ) -> Rail:
+        """Creates a new instance of Rail.
+
+        Parameters
+        ----------
+        coords : Tuple[float, float]
+            Coordinates of the rail.
+        lines_c : list
+            List of lines.
+        layout : dict
+            Dictionary containing layout information.
+        name : str
+            Name of the rail.
+        track : int
+            Track number.
+        index : int, optional
+            Index of the rail, by default None
+
+        Returns
+        -------
+        Rail
+            A new instance of Rail.
+        """
         line_string = super().__new__(cls, coords)
         line_string.__class__ = cls
         return line_string

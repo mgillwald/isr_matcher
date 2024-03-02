@@ -1162,6 +1162,14 @@ class MMPreprocessor:
         - Pruning of GNSS measurements based on GNSS noise
         - Identifying rails with double-direction and set direction attribute accordingly
 
+    Attributes
+    ----------
+    map_data: list[OperationalPoint | TrackSegment]
+        list of OperationalPoints and TrackSegments. Only TrackSegments are used for estimating the standard deviation.
+    gnss: GNSSSeries
+        Instance representing the GNSS measurements.
+    r: float
+        Serach radius for candidates. For each measurement, only rails within radius r are considered as potential matches.
     """
 
     def __init__(self, map_data: Map, gnss: GNSSSeries, r: float = 200.0):

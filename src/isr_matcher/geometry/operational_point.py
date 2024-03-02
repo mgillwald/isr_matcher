@@ -9,13 +9,52 @@ T = TypeVar("T", bound="BaseGeometry")
 
 
 class OperationalPoint(Point):
+    """Represents an operational point. Inherits from Point so shapely functions can be used on instances directly.
+
+    Attributes
+    ----------
+    _id_to_attrs : dict
+        Dictionary mapping ID to attributes.
+    __slots__ : tuple
+        Slots for assigning __class__.
+    """
+
     _id_to_attrs = {}
     __slots__ = Point.__slots__  # slots must be the same for assigning __class__ - https://stackoverflow.com/a/52140968
 
     def __init__(self, coords_epsg31467: Tuple[float, float], properties: dict, properties_info: dict):
+        """
+        Initialize an OperationalPoint.
+
+        Parameters:
+        -----------
+        coords_epsg31467 : Tuple[float, float]
+            The coordinates of the operational point in EPSG:31467 projection.
+        properties : dict
+            Additional properties of the operational point.
+        properties_info : dict
+            Information about the properties.
+        """
         self._id_to_attrs[id(self)] = dict(properties=properties, properties_info=properties_info)
 
     def __new__(cls, coords_epsg31467: Tuple[float, float], properties: dict, properties_info: dict):
+        """
+        Create a new OperationalPoint instance.
+
+        Parameters:
+        -----------
+        coords_epsg31467 : Tuple[float, float]
+            The coordinates of the operational point in EPSG:31467 projection.
+        properties : dict
+            Additional properties of the operational point.
+        properties_info : dict
+            Information about the properties.
+
+        Returns:
+        --------
+        OperationalPoint
+            A new instance of OperationalPoint.
+        """
         point = super().__new__(cls, coords_epsg31467)
         point.__class__ = cls
 

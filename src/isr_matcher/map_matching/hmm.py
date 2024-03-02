@@ -17,9 +17,34 @@ logger = logging.getLogger(__name__)
 
 
 class HMM:
-    """TODO"""
+    """Class representing a Hidden Markov Model (HMM).
+
+    Attributes
+    ----------
+    N : int
+        Number of states.
+    M : int
+        Number of observations.
+    A_list : list[np.ndarray]
+        List of state transition probability matrices.
+    B_log : np.ndarray
+        Emission probability matrix.
+    C_log : np.ndarray
+        Initial distribution.
+    """
 
     def __init__(self, A_list: list[np.ndarray], B_log: np.ndarray, C_log: np.ndarray):
+        """Initializes the Hidden Markov Model with the given parameters.
+
+        Parameters
+        ----------
+        A_list : list[np.ndarray]
+            List of state transition probability matrices, each shape (N,N).
+        B_log : np.ndarray
+            Emission probability matrix (log), shape (N,M).
+        C_log : np.ndarray
+            Initial distribution (log), shape(N,).
+        """
         self.N = A_list[0].shape[0]  # number of states
         self.M = B_log.shape[1]  # number of observations
 
@@ -68,7 +93,21 @@ class HMM:
 
     @classmethod
     def state_transition_matrix_from_map(cls, map_: Map, gnss: GNSSSeries) -> list[np.ndarray]:
-        """Computes state transition probability matrix from Map 'map_'."""
+        """
+        This method calculates state transition probability matrices for each time step based on the given map and GNSS series.
+
+        Parameters
+        ----------
+        map_ : Map
+            The map containing information about rails, operational points, and track transitions.
+        gnss : GNSSSeries
+            The GNSS series containing coordinate observations.
+
+        Returns
+        -------
+        A_list: list[np.ndarray]
+            A list of state transition probability matrices for each time step, excluding the initial time step.
+        """
 
         rails = map_['rails']  # all rails in map
         ops = map_['operational_points'] + map_['track_transitions']
@@ -286,7 +325,22 @@ class HMM:
 
     @staticmethod
     def emission_probabilities(rail: Rail, measurements: list[Point], sigma: float) -> np.ndarray:
-        """Computes emission probabilities for state 'rail', observations 'measurements' and standard deviation of GNSS noise 'sigma'."""
+        """Computes emission probabilities for the given rail, observations, and standard deviation of GNSS noise.
+
+        Parameters
+        ----------
+        rail : Rail
+            The rail for which emission probabilities are computed.
+        measurements : list[Point]
+            The sequence of observations.
+        sigma : float
+            The standard deviation of GNSS noise.
+
+        Returns
+        -------
+        np.ndarray
+            The emission probabilities for the given rail and observations.
+        """
         exponent = -0.5 * (rail.distance(measurements) / sigma) ** 2
         return np.exp(exponent) / (np.sqrt(2 * np.pi) * sigma)
 
@@ -300,8 +354,22 @@ class HMM:
 
     @classmethod
     def emission_probability_matrix_from_map_and_gnss(cls, map_: Map, gnss: GNSSSeries) -> np.ndarray:
-        """Computes emission probability matrix in log-domain from Map 'map_' and GNSS measurements 'gnss'."""
+        """Computes emission probability matrix in log-domain from Map 'map_' and GNSS measurements 'gnss'.
 
+        Parameters
+        ----------
+        rail : Rail
+            The rail for which emission probabilities are computed.
+        measurements : list[Point]
+            The sequence of observations.
+        sigma : float
+            The standard deviation of GNSS noise.
+
+        Returns
+        -------
+        B_log: np.ndarray
+            The emission probabilities for the given rail and observations in log space.
+        """
         rails = map_['rails']  # all rails in map
         N = len(rails)  # number of rails (states)
         M = len(gnss)  # number of observations

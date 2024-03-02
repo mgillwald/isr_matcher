@@ -36,20 +36,16 @@ logger = logging.getLogger(__name__)
 class RailDataImport:
 
     """
-    Class that manages the aquisition of railway infrastructure data from ISR and other from file formats.
+    Class that manages the aquisition of railway infrastructure data from ISR.
 
     Attributes
     ----------
-    filters: list[str]
-        List that contains the keys for available filters.
-
-            "EQUALS_TRACK": Returns all tracks that match the given track number(s).
-            "TRACKS_IN_BBOX": Returns all tracks within a bounding box.
-            "OP_IN_BBOX": Returns all service points within a bounding box.
-            "TRANSITIONS_IN_BBOX": Returns all transition points within a bounding box.
-            "BBOX": Returns all tracks, service points and transition points within a bounding box.
-            TODO: expand list
-
+    _filters : list
+        A list of filters used for data acquisition.
+    _project_path : Path
+        The path to the project directory.
+    _special_chars : list
+        A list of special characters used in the data.
     """
 
     def __init__(self):
