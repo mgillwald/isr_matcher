@@ -43,7 +43,7 @@ pip install isr_matcher
 
 ### Example usage
 
-The following script demonstrates the basic usage of the tool.
+The following script demonstrates the basic usage of the tool. The script can be downloaded from [github](https://github.com/mgillwald/isr_matcher/tree/main/examples) along with the (simulated) test data.
 
 ```python
 from isr_matcher import matching, clear_cache
@@ -111,7 +111,7 @@ matching(
 
 ## Help
 
-Coming Soon
+If you encounter problems or are looking for help, please open an [issue](https://github.com/mgillwald/isr_matcher/issues) or send me a [mail](marco.gillwald@gmx.de).
 
 ## Authors
 
