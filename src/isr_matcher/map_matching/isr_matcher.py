@@ -230,6 +230,7 @@ class ISRMatcher:
         sigma: float | ArrayLike | None = None,
         prune: float | Literal['auto'] | None = None,
         sigma_method: Literal['std'] | Literal['mad'] = 'std',
+        path_resolution_m: float = 5,
         average_low_velocity: bool = True,
         threshold_velocity: float = 3.0,
         correct_velocity: bool = True,
@@ -247,6 +248,8 @@ class ISRMatcher:
             Prune parameter, by default None.
         sigma_method : {'std', 'mad'}, optional
             Method to estimate sigma, by default 'std'.
+        path_resolution_m : float, optional
+            Spacing between points of computed path of train in meter, by default 5.
         average_low_velocity : bool, optional
             Determines whether to average low velocity measurements, by default True.
         threshold_velocity : float, optional
@@ -326,7 +329,7 @@ class ISRMatcher:
         rail_sequence = [self.map['rails'][i] for i in S]
         # recompute path
         path = self.postprocessor.concatenate_rails(
-            S=S, start_point=self.gnss.coords_utm[0], end_point=self.gnss.coords_utm[-1], interpol=True
+            S=S, start_point=self.gnss.coords_utm[0], end_point=self.gnss.coords_utm[-1], resolution_m=path_resolution_m
         )
 
         # compute track semgen sequence corresponding to rail sequence

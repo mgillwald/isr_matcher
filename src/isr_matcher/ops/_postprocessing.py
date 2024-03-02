@@ -66,8 +66,6 @@ class MMPostprocessor:
             Ending point of the path.
         resolution_m : float, optional
             Resolution for spline interpolation in meters, by default 5.
-        interpol : bool, optional
-            Flag indicating whether to perform spline interpolation, by default False.
 
         Returns
         -------
@@ -1243,10 +1241,10 @@ class MMPostprocessor:
         index = np.argsort(tracks).tolist()
         rails: list[Rail] = [rails[i] for i in index]  # type: ignore
 
+        scatter_group = folium.FeatureGroup(f'ISR Strecken').add_to(m)
         # add rails to map in groups based on track number
         for i, rail in enumerate(rails):
             if i == 0 or rails[i - 1].track != rails[i].track:
-                scatter_group = folium.FeatureGroup(f'Strecke {str(rail.track)} (ISR)').add_to(m)
                 color = next(color_cycle)
 
             coordinate_sequence = [(p.x, p.y) for p in rail.coords_wgs]

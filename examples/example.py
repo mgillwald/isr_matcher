@@ -44,6 +44,7 @@ sigma = None                                 # standard devioation of gnss error
 prune = 'auto'                               # 'auto': prunes measurements in 2 * sigma distance of each other. 
                                              # float: replace 2 * sigma by value in meter
                                              # None: No pruning
+path_resolution_m: float = 5                 # spacing between points for the computed path of the train.
 average_low_velocity = True                  # averages consecutive measurements with velocity smaller than 'threshold_velocity' (only if velocity measuremnt are available)
 threshold_velocity = 3                       # sets a threshold for averaging low velocities, in meter per second
 sigma_method = 'mad'                         # method for estimating sigma ('mad': conservative estimate, 'std': bold estimate)

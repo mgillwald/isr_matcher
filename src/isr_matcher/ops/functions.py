@@ -23,6 +23,7 @@ def matching(
     r: float = 1500.0,  # search radius around gnss measurements
     sigma: float | None = None,  # estimate of the gnss error (standard deviation)
     prune: Literal['auto'] | float | None = 'auto',  # pruning strategy for input gnss trajectory
+    path_resolution_m: float = 5,  # Spacing between points of computed path of train in meter, by default 5.
     average_low_velocity: bool = True,  # averages measurement points with low velocity (only if velocity measurements are available)
     threshold_velocity: float = 3,  # threshold for averaging by velocity, in meter per second. Consecutive points with lower velocity than threshold will be averaged.
     sigma_method: Literal['mad', 'std'] = 'mad',  # method for estimating sigma, if sigma is not given
@@ -59,6 +60,8 @@ def matching(
         Optional. Estimate of the gnss error, meaning the standard deviation of gnss measurements. If not set, this defaults to estimating the gnss error with the method given by 'sigma_method'.
     prune: Literal['auto'] | float | None = 'auto'
         Optional. Sets the strategy for pruning input gnss measurements. If 'auto', it prunes points within 2*sigma of the previous point. If a float, the float defines the pruning radius in meter. If None, no pruning is performed.
+    path_resolution_m : float, optional
+        Spacing between points of computed path of train in meter, by default 5.
     average_low_velocity: bool = True
         Sets whether points with low velocity should be averaged. Defaults to True.
     threshold_velocity: float = 3,
@@ -98,6 +101,7 @@ def matching(
     return_code = isr_matcher.match(
         sigma=sigma,
         prune=prune,
+        path_resolution_m=path_resolution_m,
         average_low_velocity=average_low_velocity,
         threshold_velocity=threshold_velocity,
         sigma_method=sigma_method,
