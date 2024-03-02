@@ -1,1 +1,1 @@
-from .ops.functions import matching
+from .ops.functions import matching, clear_cache
