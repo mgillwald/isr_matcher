@@ -18,12 +18,14 @@ from isr_matcher.ops._functions import (
 )
 from isr_matcher.data_handlers.import_functions import query_track_segment
 import numpy as np
-import warnings
 from pathlib import Path
 import json
 from copy import deepcopy
 import pickle
 import bisect
+from isr_matcher._constants.logging import setup_logger
+import logging
+
 
 # Type T: only instances of class BaseGeometry or subclasses (Point, Linestring, etc.)
 T = TypeVar("T", bound="BaseGeometry")
@@ -41,6 +43,11 @@ class Layout(TypedDict):
     parallel: list[Tuple[int, int]]  # all rails which are parallel
     siding: list[Tuple[int, int]]
     lines: list[LineString]
+
+
+# Create logger for the current module
+setup_logger()
+logger = logging.getLogger(__name__)
 
 
 class TrackSegment:
@@ -83,6 +90,7 @@ class TrackSegment:
         operational_point_to: OperationalPoint,
         enhance_kilometrage: bool = True,
         allow_previous: bool = True,
+        cache_preprocessed_segments: bool = True,
     ):
         # set attributes
         self._properties = deepcopy(properties)
@@ -136,7 +144,7 @@ class TrackSegment:
             self._compute_kilometrage_offset()
 
         # write preprocessed track segment to cache if it does not exist in cache
-        if not self.cache_path.exists():
+        if not self.cache_path.exists() and cache_preprocessed_segments == True:
             self.pickle_self_to_cache()
 
         # TODO: close gaps between lines (e.g 1120 Hamburg-Hasselbrook - Hamburg Hbf)
@@ -391,8 +399,6 @@ class TrackSegment:
         # assert point is on rails
         distances_to_lines = [line.distance(point) for line in lines]
         min_distance_m = np.min(distances_to_lines)
-        if min_distance_m > 5:
-            warnings.warn(f'given point does not seem to lie on track. Distance to nearest rail: {min_distance_m} m.')
 
         km = self.kilometrage.km(point=point, direction=direction, return_type=return_type)
 
@@ -1320,7 +1326,7 @@ class TrackSegment:
             self.has_additional_km_info = True
         else:
             # no kilometrage info from dataset geo-streckennetz available for track segment
-            warnings.warn('No additional kilometrage information for track segment available')
+            logger.debug('No additional kilometrage information for track segment available')
             self.has_additional_km_info = False
             if self._n_km_lines == 1:
                 self.kilometrage.add_km_point(

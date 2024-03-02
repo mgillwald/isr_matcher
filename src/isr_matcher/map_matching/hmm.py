@@ -8,6 +8,12 @@ from isr_matcher.geometry.gnss_series import GNSSSeries
 from isr_matcher.geometry.rail import Rail
 from isr_matcher.ops._functions import angle_between
 from isr_matcher._constants._filters import ISR_EXCEPTIONAL_STATION_NAMES
+from isr_matcher._constants.logging import setup_logger
+import logging
+
+# Create logger for the current module
+setup_logger()
+logger = logging.getLogger(__name__)
 
 
 class HMM:
@@ -73,9 +79,8 @@ class HMM:
         dr = 3.1
 
         # for each observation
+        logger.info(f'Computing transition matrices for {M} time steps...')
         for t in range(1, M):
-            print(f'State transitions: Computing transition matrix for timestep {t} / {M - 1}')
-
             A = np.zeros((N, N))  # initialize state transition matrix for time step t
             obs_current = observations[t]  # observation at time step t
             obs_previous = observations[t - 1]  # observation at time step t-1
@@ -275,10 +280,8 @@ class HMM:
                         A[i, i] = 1 - p_same  # lower prob. otherwise
                     # -> NO Normalization (rows)!
 
-            # A = A / A.sum(axis=1)[:, na]   # normalize rows
-            # A = np.nan_to_num(A)           # replace nan with 0
             A_list.append(A)  # append to list
-
+        logger.info(f'Transition matrices computed.')
         return A_list
 
     @staticmethod
@@ -305,13 +308,13 @@ class HMM:
         B_log = np.zeros((N, M))  # initialize state transition matrix
 
         # compute and set emission probabilites
+        logger.info(f'Computing emission probabilites for {N} rails...')
         for i in range(N):
-            print(f'Computing emission probabilities for rail {i} / {N-1}')
             B_log[i, :] = HMM.log_emission_probabilities(rail=rails[i], measurements=gnss.coords_utm, sigma=gnss.sigma)  # type: ignore (gnss.sigma is never None at this stage)
             B_log[i, :] = np.where(
                 rails[i].distance(gnss.coords_utm) > 500.0, -np.inf, B_log[i, :]
             )  # set emission prob. to 0 for distant rails
-
+        logger.info(f'Emission probabilites computed.')
         return B_log
 
     @classmethod

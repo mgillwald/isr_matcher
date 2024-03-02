@@ -11,13 +11,19 @@ from shapely.ops import nearest_points
 from typing import Tuple, Literal
 from itertools import groupby
 from isr_matcher.geometry.gnss_series import GNSSSeries
-import warnings
 import bisect
 import folium
 import pandas as pd
 from pathlib import Path
 from scipy.interpolate import splprep, splev
 from itertools import cycle
+
+from isr_matcher._constants.logging import setup_logger
+import logging
+
+# Create logger for the current module
+setup_logger()
+logger = logging.getLogger(__name__)
 
 
 class MMPostprocessor:
@@ -39,14 +45,6 @@ class MMPostprocessor:
         # concatenate rails
         path = path_by_rails[0]
         for i in range(1, len(path_by_rails)):
-            import matplotlib.pyplot as plt
-
-            f, ax = plt.subplots(1, 1)
-            ax.plot(*path.xy, color='k', alpha=0.3)
-            ax.plot(*path_by_rails[i].xy, color='g')
-            if i < len(path_by_rails) - 1:
-                ax.plot(*path_by_rails[i + 1].xy, color='b')
-
             # clip next rail (if transition at middle of rail, remove part of rail before transition point)
             if (
                 path_by_rails[i].track_segment_name
@@ -59,11 +57,6 @@ class MMPostprocessor:
             split_point = nearest_points(path_by_rails[i], Point(path.coords[-1]))[0]
             split_postion = path_by_rails[i].project(split_point, normalized=True)
 
-            ax.scatter(split_point.x, split_point.y, color='r')
-            ax.scatter(Point(path_by_rails[i - 1].coords[-1]).x, Point(path_by_rails[i - 1].coords[-1]).y, color='k')
-            ax.scatter(Point(path.coords[-1]).x, Point(path.coords[-1]).y, color='orange')
-
-            plt.show()
             if split_postion > 0 and split_postion < 1:
                 pre_split_point = nearest_points(path_by_rails[i], Point(path.coords[-2]))[0]
                 distance = path_by_rails[i].project(split_point) - path_by_rails[i].project(pre_split_point)
@@ -513,9 +506,10 @@ class MMPostprocessor:
                 trips_inclines += inclines
                 track_segment_names += len(kms_inclines) * [track_segment_sequence[n].name]
 
-            kms_inclines_list.append(trips_kms)
-            inclines_list.append(trips_inclines)
-            track_segment_names_list.append(track_segment_names)
+            if len(trips_kms) > 0:
+                kms_inclines_list.append(trips_kms)
+                inclines_list.append(trips_inclines)
+                track_segment_names_list.append(track_segment_names)
 
         # inclines at running km (transform kilometrage kms to running kms)
         running_kms_list = []
@@ -700,12 +694,12 @@ class MMPostprocessor:
                     warning = True
             if max_height_from_isr == -1.0:
                 max_height_from_isr = 0
-                warnings.warn(
-                    message='Max height information is missing completely in ISR. Height profile is (or parts of it are) affected by a constant offset.'
+                logger.debug(
+                    'Max height information is missing completely in ISR. Height profile is (or parts of it are) affected by a constant offset.'
                 )
             elif warning == True:
-                warnings.warn(
-                    message='Max height information partly missing in ISR. Height profile (or parts of it) may be affected by a constant offset.'
+                logger.debug(
+                    'Max height information partly missing in ISR. Height profile (or parts of it) may be affected by a constant offset.'
                 )
 
             diff = max_height_from_isr - max_height_from_incline

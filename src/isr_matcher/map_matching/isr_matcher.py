@@ -17,6 +17,13 @@ from typing import Tuple
 import json
 from shapely import Point
 from isr_matcher.data_handlers.transformer import Transformer
+import folium
+from isr_matcher._constants.logging import setup_logger
+import logging
+
+# Create logger for the current module
+setup_logger()
+logger = logging.getLogger(__name__)
 
 
 # ISR Map Matching class
@@ -34,13 +41,18 @@ class ISRMatcher:
         r_candidates: float = 200.0,
         export_results: bool = True,
         enhance_kilometrage: bool = True,
+        cache_preprocessed_segments: bool = True,
     ):
         """TODO"""
 
         self._project_path = Path(__file__).parent.parent.parent.parent  # path to root of project
         self._r_boundary = r_boundary  # radius for boundary
         self._r_candidates = r_candidates  # radius for rail candidates (around each measurment point)
-        self.query_map(gnss=gnss_series, enhance_kilometrage=enhance_kilometrage)  # query map and set self._map
+        self.query_map(
+            gnss=gnss_series,
+            enhance_kilometrage=enhance_kilometrage,
+            cache_preprocessed_segments=cache_preprocessed_segments,
+        )  # query map and set self._map
         self._preprocessor = MMPreprocessor(  # create preprocessor instance
             map_data=self.map,
             gnss=gnss_series,
@@ -90,7 +102,7 @@ class ISRMatcher:
         """Returns the postprocessor instance."""
         return self._postprocessor
 
-    def query_map(self, gnss: GNSSSeries, enhance_kilometrage: bool = True):
+    def query_map(self, gnss: GNSSSeries, enhance_kilometrage: bool = True, cache_preprocessed_segments: bool = True):
         """
         Query ISR for all elements within a boundary around GNSS measurements.
 
@@ -104,10 +116,18 @@ class ISRMatcher:
 
         # query map data
         rdi = RailDataImport()
-        map_data = rdi.query(filter_name='BOUNDARY', args=[boundary_string], enhance_kilometrage=enhance_kilometrage)
+        logger.info('Querying ISR for all elements in boundary...')
+        map_data = rdi.query(
+            filter_name='BOUNDARY',
+            args=[boundary_string],
+            enhance_kilometrage=enhance_kilometrage,
+            cache_preprocessed_segments=cache_preprocessed_segments,
+        )
 
         # set map attribute
         self._map = ISRMatcher._map_data_to_map(map_data=map_data)
+
+        logger.info('Preprocessing track segments complete.')
 
     def preprocess_map(self):
         """Preprocesses map."""
@@ -165,10 +185,10 @@ class ISRMatcher:
         threshold_velocity: float = 3.0,
         correct_velocity: bool = True,
         create_plots: bool = True,
-    ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, dict, Map]:
+    ) -> int:
         """TODO"""
 
-        print('Preprocessing GNSS series...')
+        logger.info('Preprocessing GNSS series...')
         # preprocess: gnss
         self.preprocess_gnss(
             sigma=sigma,
@@ -178,7 +198,7 @@ class ISRMatcher:
             threshold_velocity=threshold_velocity,
         )
 
-        print('Complete')
+        logger.info('Preprocessing GNSS complete.')
 
         import matplotlib.pyplot as plt
 
@@ -190,65 +210,35 @@ class ISRMatcher:
         plt.savefig(self.export_path / 'input_pruned.png')
         plt.close()
 
-        print('Preprocessing map...')
+        logger.info('Preprocessing map...')
         # preprocess: map
         # set rail directions
         # split rails at switch zones
         self.preprocess_map()
-        print('Complete')
+        logger.info('Preprocessing map complete')
 
-        print('Constructing HMM...')
+        logger.info('Constructing HMM...')
         # construct hmm  | HMM input: preprocessed map, pre processed gnss
         hmm = HMM.from_map_and_gnss(map_=self.map, gnss=self.gnss)
         self.hmm = hmm
-        print('Complete')
+        logger.info('Constructing HMM complete.')
 
-        print('Computing optimal state sequence...')
+        logger.info('Computing optimal state sequence...')
         # solve hmm with viterbi
         S = hmm.solve()  # S: optimal state sequence
-        print('Complete')
 
         # check if a solution was found
-        print(S)
         assert not all(
             [s == 0 for s in S]
         ), f'Map Matching Solution could not be found, probably due to bad or sparse input.'
+        logger.info('Successfully computed optimal state sequence.')
 
         # compute tentative path
-        print('Compute path...')
+        logger.info('Computing path...')
         path = self.postprocessor.concatenate_rails(
             S=S, start_point=self.gnss.coords_utm[0], end_point=self.gnss.coords_utm[-1]
         )
         rail_sequence = [self.map['rails'][i] for i in S]
-
-        """
-        import matplotlib.pyplot as plt
-        f, ax = plt.subplots(1, 1)
-        rails = self.map['rails']
-        gnss = self.gnss.coords_utm
-        for i, rail in enumerate(rails):
-            ax.plot(*rail.xy, color='k')
-            mp = rail.interpolate(0.5, normalized=True)
-            ax.text(mp.x, mp.y, str(i), color='g')
-
-        for i, g in enumerate(gnss):
-            ax.scatter(g.x, g.y, color='r', edgecolor='k')
-            ax.text(g.x, g.y, str(i))
-            if i > 1000 and i < 1600:
-                print(f'{i}: {rail_sequence[i].track} / {rail_sequence[i].track_segment_name} / {rail_sequence[i].direction}')
-        plt.show()
-        """
-        # import matplotlib.pyplot as plt
-        # f, ax = plt.subplots(1, 1)
-        # ax.plot(*path.xy, color='k', alpha=0.5)
-        # for i, rail in enumerate(rail_sequence):
-        #    if i == 0 or rail_sequence[i-1] != rail_sequence[i]:
-        #        ax.plot(*rail.xy, alpha=0.1)
-        #        mp = rail.interpolate(0.5, normalized=True)
-        #        ax.text(mp.x, mp.y, str(i), color='g')
-        # for g in self.gnss.coords_utm:
-        #    ax.scatter(g.x, g.y, color='r', edgecolor='k')
-        # plt.show()
 
         # compute positional parameters
         position_dict = self.postprocessor.compute_position_parameter(
@@ -269,10 +259,10 @@ class ISRMatcher:
         track_segment_sequence, track_segment_indices = self.postprocessor.compute_track_segment_sequence(
             rail_sequence=rail_sequence
         )
-        print('Complete')
+        logger.info('Path computation completed.')
 
         # incline profile (from ISR)
-        print('Computing incline and height profile...')
+        logger.info('Computing incline and height profile...')
         incline_profile = self.postprocessor.compute_incline_profile(
             path=path,
             gnss_coords_utm=self.gnss.coords_utm,
@@ -286,14 +276,20 @@ class ISRMatcher:
         profiles = self.postprocessor.compute_height_profile(
             incline_profile=incline_profile, track_segment_sequence=track_segment_sequence
         )
-        print('Complete')
+        logger.info('Incline and height profile completed.')
 
+        logger.info('Computing veclocity profile...')
         # compute velocity_profile
         velocity_kmh = self.postprocessor.velocity_from_gnss(
-            kms_running=position_dict['kms_running'], gnss=self.gnss, incline_profile=profiles, correct_velocity=True
+            kms_running=position_dict['kms_running'],
+            gnss=self.gnss,
+            incline_profile=profiles,
+            correct_velocity=correct_velocity,
         )
         velocity_ms = np.array(velocity_kmh) / 3.6
+        logger.info('Veclocity profile completed.')
 
+        logger.info('Computing acceleration profile....')
         # compute acceleartion_profile
         acceleration_ms2 = self.postprocessor.acceleration_from_gnss_and_velocity(
             gnss=self.gnss, velocity_ms=velocity_ms.tolist()
@@ -304,7 +300,9 @@ class ISRMatcher:
                 gnss=self.gnss, velocity_ms=self.gnss.velocity_ms.tolist()
             )
             self.gnss._acceleration_ms2 = np.array(acceleration_from_measured_velocity_ms2)
+        logger.info('Acceleration profile completed.')
 
+        logger.info(f'Writing results to: {self.export_path}.')
         # create result dataframe
         df_dict = {
             'time': self.gnss.time,
@@ -467,7 +465,16 @@ class ISRMatcher:
             plt.savefig(self.export_path / 'acceleration_ms2.png')
             plt.close()
 
-        return df_results, df_incline_and_height_profile, df_path, route_dict, self.map
+        # folium map
+        m = MMPostprocessor.map_matching_results_to_map(
+            df=df_results, export_path=self.export_path, df_path=df_path, map_=self.map, return_map=True
+        )
+        folium.LayerControl().add_to(m)
+        m.save(self.export_path / f'map.html')  # save map
+
+        logger.info(f'Results written to: {self.export_path}.')
+
+        return 0
 
     def prune_timesteps_with_wrong_direction(self, position_dict: dict, S: list[int]) -> Tuple[dict, list[int]]:
         """Prunes timesteps with direction error."""
@@ -522,6 +529,7 @@ class ISRMatcher:
         operational_points = []
         rails = []
         track_transitions = []
+
         for element in map_data:
             if element.element_type == 'TrackSegment':
                 track_segments.append(element)  # append track segment

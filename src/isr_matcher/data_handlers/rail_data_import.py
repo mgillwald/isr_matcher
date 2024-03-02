@@ -11,6 +11,7 @@ from isr_matcher._constants._properties import (
     ISR_PROPERTIES_TRACK_SEGMENTS,
 )
 from isr_matcher._constants._filters import ISR_EXCEPTIONAL_STATION_NAMES
+from isr_matcher._constants.logging import setup_logger
 from pathlib import Path
 from requests import post
 from requests.exceptions import RequestException
@@ -22,9 +23,14 @@ from shapely import Point, LineString, MultiLineString
 import numpy as np
 import pickle
 from copy import deepcopy
+import logging
 
 # Type T: only instances of class BaseGeometry or subclasses (Point, Linestring, etc.)
 T = TypeVar("T", bound="BaseGeometry")
+
+# Create logger for the current module
+setup_logger()
+logger = logging.getLogger(__name__)
 
 
 class RailDataImport:
@@ -164,6 +170,7 @@ class RailDataImport:
         filter_name: Literal["EQUALS_TRACK"],
         args: list[str | int | float],
         enhance_kilometrage: bool,
+        cache_preprocessed_segments: bool,
     ) -> list[TrackSegment]:
         ...
 
@@ -173,6 +180,7 @@ class RailDataImport:
         filter_name: Literal["EQUALS_TRACK_SEG"],
         args: list[str | int | float],
         enhance_kilometrage: bool,
+        cache_preprocessed_segments: bool,
     ) -> TrackSegment:
         ...
 
@@ -182,6 +190,7 @@ class RailDataImport:
         filter_name: Literal["EQUALS_OP"],
         args: list[str | int | float],
         enhance_kilometrage: bool,
+        cache_preprocessed_segments: bool,
     ) -> OperationalPoint:
         ...
 
@@ -191,6 +200,7 @@ class RailDataImport:
         filter_name: Literal["TRACKS_IN_BBOX"],
         args: list[str | int | float],
         enhance_kilometrage: bool,
+        cache_preprocessed_segments: bool,
     ) -> list[TrackSegment]:
         ...
 
@@ -200,6 +210,7 @@ class RailDataImport:
         filter_name: Literal["OP_IN_BBOX"],
         args: list[str | int | float],
         enhance_kilometrage: bool,
+        cache_preprocessed_segments: bool,
     ) -> list[OperationalPoint]:
         ...
 
@@ -209,6 +220,7 @@ class RailDataImport:
         filter_name: Literal["TRANSITIONS_IN_BBOX"],
         args: list[str | int | float],
         enhance_kilometrage: bool,
+        cache_preprocessed_segments: bool,
     ) -> list[OperationalPoint]:
         ...
 
@@ -218,6 +230,7 @@ class RailDataImport:
         filter_name: Literal["BBOX"],
         args: list[str | int | float],
         enhance_kilometrage: bool,
+        cache_preprocessed_segments: bool,
     ) -> list[OperationalPoint | TrackSegment]:
         ...
 
@@ -227,6 +240,7 @@ class RailDataImport:
         filter_name: Literal["BOUNDARY"],
         args: list[str | int | float],
         enhance_kilometrage: bool,
+        cache_preprocessed_segments: bool,
     ) -> list[OperationalPoint | TrackSegment]:
         ...
 
@@ -250,6 +264,7 @@ class RailDataImport:
         ],
         args: list[str | int | float],
         enhance_kilometrage: bool = True,
+        cache_preprocessed_segments: bool = True,
     ) -> Union[TrackSegment, list[TrackSegment], OperationalPoint, list[OperationalPoint]]:
         """
         Queries for objects according to 'filter_name' and 'args'. Objects are read from cache, if possible. If the object does not exist in the cache, a query is sent to ISR, and the object is created from the response.
@@ -304,8 +319,6 @@ class RailDataImport:
             response = self.query_isr(filter_name='EQUALS_TRACK', args=args)
 
             if response:
-                print("Query successful.")
-
                 track_segments = []
                 # iterate over features
                 for track_seg in response['features']:
@@ -383,8 +396,11 @@ class RailDataImport:
                 response = self.query_isr(filter_name='EQUALS_TRACK_SEG', args=args)
 
                 if response:
-                    print("Query successful.")
-                    track_segment = self._track_segment_from_feature_isr(isr_feature=response['features'][0])
+                    track_segment = self._track_segment_from_feature_isr(
+                        isr_feature=response['features'][0],
+                        enhance_kilometrage=enhance_kilometrage,
+                        cache_preprocessed_segments=cache_preprocessed_segments,
+                    )
                 else:
                     # request failed
                     raise RequestException(f"An error occured while handling the request to ISR.")
@@ -405,7 +421,6 @@ class RailDataImport:
                 response2 = self.query_isr(filter_name='EQUALS_TRANSITION', args=['*', track_nr])
 
                 if response1 and response2:
-                    print("Query successful.")
                     response = response1
                     response['features'] += response2['features']
                     self.export_json(response=response, filter_name='EQUALS_OP', args=['*', track_nr])
@@ -435,7 +450,7 @@ class RailDataImport:
                 responses.append(response_)
 
             if all(responses):
-                print("Query successful.")
+                logger.info('Query successful.')
 
                 if len(responses) > 1:  # merge responses
                     response = responses[0]
@@ -469,6 +484,7 @@ class RailDataImport:
                             filepath = matching_files[0]
                             # load from file
                             track_segment = self._track_segment_from_pickle(file_path=filepath)
+                            logger.info(f'Loaded from file: {track_nr} {name}.')
 
                         elif len(matching_files) > 1:
                             raise NotImplementedError('Not Implemented')
@@ -478,10 +494,11 @@ class RailDataImport:
                             response = self.query_isr(filter_name='EQUALS_TRACK_SEG', args=[int(track_nr), str(name)])
 
                             if response:
-                                print("Query successful.")
+                                logger.info(f'Preprocessing: {track_nr} {name}.')
                                 track_segment = self._track_segment_from_feature_isr(
                                     isr_feature=response['features'][0],
                                     enhance_kilometrage=enhance_kilometrage,
+                                    cache_preprocessed_segments=cache_preprocessed_segments,
                                 )
                             else:
                                 # request failed
@@ -506,7 +523,6 @@ class RailDataImport:
                             # query ops for track and export json
                             response = self.query_isr(filter_name='EQUALS_OP', args=['*', track_nr])
                             if response:
-                                print("Query successful.")
                                 self.export_json(response=response, filter_name='EQUALS_OP', args=['*', track_nr])
                             else:
                                 # request failed
@@ -528,7 +544,6 @@ class RailDataImport:
                                 # query ops for track and export json
                                 response = self.query_isr(filter_name='EQUALS_OP', args=['*', track_nr])
                                 if response:
-                                    print("Query successful.")
                                     self.export_json(response=response, filter_name='EQUALS_OP', args=['*', track_nr])
                                 else:
                                     # request failed
@@ -1599,7 +1614,9 @@ class RailDataImport:
         else:
             raise ValueError(f'Given filepath does not exist or does not point to a pickle file: {file_path}')
 
-    def _track_segment_from_track_and_name(self, track: int, name: str, allow_previous: bool = True) -> TrackSegment:
+    def _track_segment_from_track_and_name(
+        self, track: int, name: str, allow_previous: bool = True, cache_preprocessed_segments: bool = True
+    ) -> TrackSegment:
         """
         Create a TrackSegment instance from a track number and name.
 
@@ -1636,12 +1653,20 @@ class RailDataImport:
         else:
             response = self.query_isr(filter_name='EQUALS_TRACK_SEG', args=[track, name])
             assert isinstance(response, dict)
-            track_segment = self._track_segment_from_feature_isr(isr_feature=response, allow_previous=allow_previous)
+            track_segment = self._track_segment_from_feature_isr(
+                isr_feature=response,
+                allow_previous=allow_previous,
+                cache_preprocessed_segments=cache_preprocessed_segments,
+            )
 
         return track_segment
 
     def _track_segment_from_feature_isr(
-        self, isr_feature: dict, allow_previous: bool = True, enhance_kilometrage: bool = True
+        self,
+        isr_feature: dict,
+        allow_previous: bool = True,
+        enhance_kilometrage: bool = True,
+        cache_preprocessed_segments: bool = True,
     ) -> TrackSegment:
         """
         Create a TrackSegment instance from ISR response (JSON dictionary).
@@ -1788,6 +1813,7 @@ class RailDataImport:
             operational_point_to,
             enhance_kilometrage,
             allow_previous,
+            cache_preprocessed_segments,
         )
 
         return track_segment

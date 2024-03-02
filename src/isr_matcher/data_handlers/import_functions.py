@@ -747,21 +747,13 @@ def track_segment_from_json_dict(
     # set properties
     PROPERTIES = ISR_PROPERTIES_TRACK_SEGMENTS
 
-    # parse properties # TODO: make function
-    # create dict of type {'property': value}, where value is transformed from string to desired type
-    # for key, value, l in zip(PROPERTIES.keys(), properties.values(), PROPERTIES.values()):
-    #   if len(l) > 0:
-    #       print(f'{key}: {value}')
-    #       l[2](value)
+    # parse properties
     properties = {
         key: l[2](value)
         for key, value, l in zip(PROPERTIES.keys(), properties.values(), PROPERTIES.values())
         if len(l) > 0
     }
-    # for key, value, l in zip(PROPERTIES.keys(), properties_2.values(), PROPERTIES.values()):
-    #   if len(l) > 0:
-    #       print(f'{key}: {value}')
-    #       l[2](value)
+
     if properties_2:
         properties_2 = {
             key: l[2](value)

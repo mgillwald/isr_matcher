@@ -5,7 +5,13 @@ from typing import Tuple, Union, Literal
 from isr_matcher._constants._parse import db_km_to_km, km_to_db_km
 from isr_matcher.ops._functions import split_line_at_point, only_km_db, only_m_db
 import numpy as np
-import warnings
+from isr_matcher._constants.logging import setup_logger
+import logging
+
+
+# Create logger for the current module
+setup_logger()
+logger = logging.getLogger(__name__)
 
 
 # class Kilometrage
@@ -555,7 +561,7 @@ class Kilometrage:
         if n_lines == 1:
             if direction != 0:
                 # direction doesn't matter
-                warnings.warn(
+                logger.debug(
                     f'Received direction={direction}. Ignoring direction as there exists only on kilometrage line.'
                 )
 

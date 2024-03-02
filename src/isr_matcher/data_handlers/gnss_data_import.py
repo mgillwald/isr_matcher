@@ -18,19 +18,13 @@ class GNSSDataImport:
     """
 
     def __init__(self):
-        self.column_types_dict = {
-            "time": str,
-            "latitude": float,
-            "longitude": float,
-            "altitude_m": float,
-            "velocity_ms": float,
-            "acceleration_ms2": float,
-        }
+        self.column_names_obligatory = [['time_utc', 'time_s'], 'latitude', 'longitude']
+        self.column_names_optional = ['altitude_m', 'velocity_ms', 'acceleration_ms2']
 
     def read_csv(
         self,
         csv_path: Path | str,
-        column_name_dict: dict,
+        column_name_dict: dict | None,
         delimiter: str = ',',
         decimal: str = '.',
         na_values: list[str] | None = None,
@@ -46,47 +40,78 @@ class GNSSDataImport:
         "acceleration_ms2": None,
         """
 
-        if column_name_dict['time_s'] and column_name_dict['time_utc']:
-            # both times
-            parse_dates = [column_name_dict['time_utc']]
+        # assert input
+        if not isinstance(column_name_dict, type(None)):
+            if column_name_dict['time_s'] and column_name_dict['time_utc']:
+                # both times
+                parse_dates = [column_name_dict['time_utc']]
 
-        elif column_name_dict['time_s']:
-            # no utc time
-            parse_dates = False
+            elif column_name_dict['time_s']:
+                # no utc time
+                parse_dates = False
 
-        elif column_name_dict['time_utc']:
-            # compute time in seconds
-            parse_dates = [column_name_dict['time_utc']]
-            time_s = None
+            elif column_name_dict['time_utc']:
+                # compute time in seconds
+                parse_dates = [column_name_dict['time_utc']]
+                time_s = None
+            else:
+                raise ValueError(
+                    "Both 'time_utc' and 'time_s' in column_name_dict are None. At least one must be specified: The csv file must contain at least one time column. Please set the corresponding column name in column_name_dict."
+                )
         else:
-            raise ValueError(
-                "Both 'time_utc' and 'time_s' in column_name_dict are None. At least one must be specified: The csv file must contain at least one time column. Please set the corresponding column name in column_name_dict."
+            parse_dates = ['time_utc']
+
+        try:
+            # read
+            df = pd.read_csv(
+                csv_path,
+                delimiter=delimiter,
+                decimal=decimal,
+                parse_dates=parse_dates,
+                na_values=na_values,
+                skiprows=skiprows,
             )
 
-        # read
-        df = pd.read_csv(
-            csv_path,
-            delimiter=delimiter,
-            decimal=decimal,
-            parse_dates=parse_dates,
-            na_values=na_values,
-            skiprows=skiprows,
-        )
+        except:
+            # read
+            df = pd.read_csv(
+                csv_path,
+                delimiter=delimiter,
+                decimal=decimal,
+                parse_dates=False,
+                na_values=na_values,
+                skiprows=skiprows,
+            )
 
-        # parse
-        column_names_dict = {val: key for (key, val) in zip(column_name_dict.keys(), column_name_dict.values()) if val}
-        column_names = [val for val in column_name_dict.values() if val]
-        column_names_dict = {val: key for (key, val) in zip(column_name_dict.keys(), column_name_dict.values()) if val}
+        for column in self.column_names_obligatory:
+            if isinstance(column, list):
+                assert (
+                    column[0] in df.columns or column[1] in df.columns
+                ), 'One time column is missing in csv file or has wrong name. Please check the file or the column_name_dict parameter.'
+            else:
+                assert (
+                    column in df.columns
+                ), f'Column {column} is missing in csv file or incorrectly mapped with parameter column_name_dict.'
 
-        # rename to standardized column names
-        df = df[column_names]
-        df = df.rename(columns=column_names_dict)
+        if not isinstance(column_name_dict, type(None)):
+            # parse
+            column_names_dict = {
+                val: key for (key, val) in zip(column_name_dict.keys(), column_name_dict.values()) if val
+            }
+            column_names = [val for val in column_name_dict.values() if val]
+            column_names_dict = {
+                val: key for (key, val) in zip(column_name_dict.keys(), column_name_dict.values()) if val
+            }
+
+            # rename to standardized column names
+            df = df[column_names]
+            df = df.rename(columns=column_names_dict)
 
         # average over identical positions
         aggregate = []
         for column in df.columns:
             aggregate.append((column, np.mean))
-        df = df.groupby(['latitude', 'longitude'], sort=False).agg(np.mean).reset_index()
+        df = df.groupby(['latitude', 'longitude'], sort=False).agg('mean').reset_index()
 
         # extract values
         time_utc = df['time_utc'].to_numpy() if 'time_utc' in df.columns else None
