@@ -5,3 +5,4 @@ cache/track_segments_continued/*.pickle
 *pytest_cache*
 *egg-info*
 dist
+examples/results
