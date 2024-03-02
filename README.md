@@ -122,7 +122,7 @@ Marco Gillwald ([marco.gillwald@gmx.de](marco.gillwald@gmx.de) / [mgillwald](htt
 * 0.0.3
     * Readme updated
     * Example added
-    * Update 
+    * Updated doc strings
 * 0.0.2
     * Readme added
 * 0.0.1
@@ -141,7 +141,7 @@ Reaching those goals will culminate in the first stable release. Additionally, a
 
 ## License
 
-This project is licensed under the Apache Software License 2.0 - see the LICENSE.md file for details
+This project is licensed under the Apache Software License 2.0 - see the LICENSE file for details
 
 ## Acknowledgments
 
