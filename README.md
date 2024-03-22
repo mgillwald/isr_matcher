@@ -35,7 +35,7 @@ The main functionality of the tool is divided into three steps:
 
 The following image provides an overview of the structure of the map matching functionality.
 
-![Structure of the map matching tool](images/Tool.png)
+![Structure of the map matching tool](https://github.com/mgillwald/isr_matcher/blob/main/images/Tool.png)
 Structure of the map matching tool.
 
 ## Results
@@ -51,8 +51,8 @@ The map matching results are output to files. Namely, the following result files
 - **map.html**
 
     An HTML-map created with ``folium`` that visualizes the GNSS measurements and map matched route. 
-    ![Example of map matching result](images/Example.png)
-Example of map matching result and visualization. TODO: Attribution 
+    ![Example of map matching result](images/Example.PNG)
+Example of map matching result and visualization.  
 - **results.csv**
     
     A CSV-file that contains the main results. The following columns are included: 
@@ -94,7 +94,7 @@ Example of map matching result and visualization. TODO: Attribution
 
 
 
-    ![Example of map matching result](images/Profiles.png)
+    ![Example of map matching result](https://github.com/mgillwald/isr_matcher/blob/main/images/Profiles.png)
 Examples for computed route profiles 
 
 ## Getting Started
