@@ -325,6 +325,8 @@ If you encounter problems or are looking for help, please open an [issue](https:
 Marco Gillwald ([marco.gillwald@gmx.de](marco.gillwald@gmx.de) / [mgillwald](https://github.com/mgillwald))
 
 ## Version History
+* 0.0.5
+    * Fix images in readme for PyPi
 * 0.0.4
     * Readme updated
     * Minor bug fixes
