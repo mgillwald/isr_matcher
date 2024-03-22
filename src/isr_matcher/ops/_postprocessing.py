@@ -78,8 +78,9 @@ class MMPostprocessor:
 
         # concatenate rails
         path = path_by_rails[0]
+
         for i in range(1, len(path_by_rails)):
-            # clip next rail (if transition at middle of rail, remove part of rail before transition point)
+            # special case
             if (
                 path_by_rails[i].track_segment_name
                 in 'Ludwigshafen (Rhein) Hbf, W 14 - Ludwigshafen (Rhein) Mitte 3401'
@@ -87,10 +88,13 @@ class MMPostprocessor:
                 in 'Ludwigshafen (Rhein) Überleitung Süd - Ludwigshafen (Rhein) Mitte 3522'
             ):
                 continue
+
             no_split = False
             split_point = nearest_points(path_by_rails[i], Point(path.coords[-1]))[0]
             split_postion = path_by_rails[i].project(split_point, normalized=True)
+            split_postion_pre = path_by_rails[i - 1].project(split_point, normalized=True)
 
+            # clip next rail (if transition at middle of rail, remove part of rail before transition point)
             if split_postion > 0 and split_postion < 1:
                 pre_split_point = nearest_points(path_by_rails[i], Point(path.coords[-2]))[0]
                 distance = path_by_rails[i].project(split_point) - path_by_rails[i].project(pre_split_point)
@@ -115,19 +119,38 @@ class MMPostprocessor:
                     else:
                         segment = segment1
 
+            # check if next segment has opposite direction
+            # if it has, skip segment if next segment after is very close (to avoid running backwards)
+            elif (split_postion <= 1e-3 and split_postion_pre >= 1 - 1e-3) or (
+                split_postion_pre <= 1e-3 and split_postion >= 1 - 1e-3
+            ):
+                if path_by_rails[i - 1].distance(path_by_rails[i + 1]) <= 10:
+                    continue
+                else:
+                    segment = path_by_rails[i]
+
             else:
                 segment = path_by_rails[i]
+
             path = MMPostprocessor.join(path, segment)
 
         # clip path (if path starts/ends at middle of rail, remove part of rail after/before)
         start_point_on_path = nearest_points(path, start_point)[0]
         try:
-            path = split_line_at_point(path, start_point_on_path)[1]
+            p1, p2 = split_line_at_point(path, start_point_on_path)
+            if p1.distance(nearest_points(path, end_point)[0]) <= p2.distance(nearest_points(path, end_point)[0]):
+                path = p1
+            else:
+                path = p2
         except ValueError:
             pass
         end_point_on_path = nearest_points(path, end_point)[0]
         try:
-            path = split_line_at_point(path, end_point_on_path)[0]
+            p1, p2 = split_line_at_point(path, end_point_on_path)
+            if p1.distance(start_point_on_path) <= p2.distance(start_point_on_path):
+                path = p1
+            else:
+                path = p2
         except ValueError:
             pass
 
