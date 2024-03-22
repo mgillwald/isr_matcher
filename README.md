@@ -51,8 +51,8 @@ The map matching results are output to files. Namely, the following result files
 - **map.html**
 
     An HTML-map created with ``folium`` that visualizes the GNSS measurements and map matched route. 
-    ![Example of map matching result](images/Example.PNG)
-Example of map matching result and visualization.  
+    ![Example of map matching result](https://github.com/mgillwald/isr_matcher/blob/main/images/Example.PNG)
+Example of map matching result and visualization. Background map from [OpenStreetMap](https://www.openstreetmap.org/copyright).
 - **results.csv**
     
     A CSV-file that contains the main results. The following columns are included: 
