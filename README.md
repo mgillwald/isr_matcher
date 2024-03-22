@@ -35,7 +35,7 @@ The main functionality of the tool is divided into three steps:
 
 The following image provides an overview of the structure of the map matching functionality.
 
-![Structure of the map matching tool](https://github.com/mgillwald/isr_matcher/blob/main/images/Tool.png)
+![Structure of the map matching tool](https://raw.githubusercontent.com/mgillwald/isr_matcher/main/images/Tool.png)
 Structure of the map matching tool.
 
 ## Results
@@ -51,7 +51,7 @@ The map matching results are output to files. Namely, the following result files
 - **map.html**
 
     An HTML-map created with ``folium`` that visualizes the GNSS measurements and map matched route. 
-    ![Example of map matching result](https://github.com/mgillwald/isr_matcher/blob/main/images/Example.PNG)
+    ![Example of map matching result](https://raw.githubusercontent.com/mgillwald/isr_matcher/main/images/Example.PNG)
 Example of map matching result and visualization. Background map from [OpenStreetMap](https://www.openstreetmap.org/copyright).
 - **results.csv**
     
@@ -94,7 +94,7 @@ Example of map matching result and visualization. Background map from [OpenStree
 
 
 
-    ![Example of map matching result](https://github.com/mgillwald/isr_matcher/blob/main/images/Profiles.png)
+    ![Example of map matching result](https://raw.githubusercontent.com/mgillwald/isr_matcher/main/images/Profiles.png)
 Examples for computed route profiles 
 
 ## Getting Started
@@ -325,8 +325,16 @@ If you encounter problems or are looking for help, please open an [issue](https:
 Marco Gillwald ([marco.gillwald@gmx.de](marco.gillwald@gmx.de) / [mgillwald](https://github.com/mgillwald))
 
 ## Version History
+
+
+<details>
+  <summary>Show</summary>
+
+* 0.0.6
+    * Fix images
+    * Refine readme
 * 0.0.5
-    * Fix images in readme for PyPi
+    * Fix images
 * 0.0.4
     * Readme updated
     * Minor bug fixes
@@ -338,6 +346,8 @@ Marco Gillwald ([marco.gillwald@gmx.de](marco.gillwald@gmx.de) / [mgillwald](htt
     * Readme added
 * 0.0.1
     * Initial Release
+
+</details>
 
 ## Road Map
 
@@ -355,6 +365,10 @@ Reaching those goals will culminate in the first stable release. Additionally, a
 This project is licensed under the Apache Software License 2.0 - see the LICENSE file for details
 
 ## Acknowledgments
+
+[1] P. Newson und J. Krumm, „Hidden Markov Map Matching Through Noise and Sparseness,“
+in 17th ACM SIGSPATIAL International Conference on Advances in Geographic
+Information Systems, November 4-6, Seattle, WA, Nov. 2009, S. 336–343. URL: [https://www.microsoft.com/en-us/research/publication/hidden-markov-map-matching-noise-sparseness/](https://www.microsoft.com/en-us/research/publication/hidden-markov-map-matching-noise-sparseness/).
 
 This package does not include, but allows to query data from infrastructure registry ([Infrastrukturregister](https://geovdbn.deutschebahn.com/isr)) of Deutsche Bahn.
 This package uses kilometrage information from the dataset [Geo-Streckennetz](https://data.deutschebahn.com/dataset/geo-strecke.html) of Deutsche Bahn.
