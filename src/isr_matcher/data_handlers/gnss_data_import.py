@@ -86,11 +86,11 @@ class GNSSDataImport:
         for column in self.column_names_obligatory:
             if isinstance(column, list):
                 assert (
-                    column[0] in df.columns or column[1] in df.columns
+                    column_name_dict[column[0]] in df.columns or column_name_dict[column[1]] in df.columns
                 ), 'One time column is missing in csv file or has wrong name. Please check the file or the column_name_dict parameter.'
             else:
                 assert (
-                    column in df.columns
+                    column_name_dict[column] in df.columns
                 ), f'Column {column} is missing in csv file or incorrectly mapped with parameter column_name_dict.'
 
         if not isinstance(column_name_dict, type(None)):

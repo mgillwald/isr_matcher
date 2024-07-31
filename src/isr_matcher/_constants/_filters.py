@@ -534,6 +534,7 @@ ISR_EXCEPTIONAL_STATION_NAMES = [
     "Grünbach                         (Vogtl)",
     "Groß Schwaß",
     "Stade DB-Grenze                  (Plang)",
+    "Merklingen - Schwäbische Alb",
 ]
 
 # ISR_SYNOMYMS = {

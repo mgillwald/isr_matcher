@@ -65,8 +65,10 @@ class RailDataImport:
             "TUNNEL_IN_BOUNDARY",
             "BOUNDARY",
         ]
-        self._project_path = Path(__file__).parent.parent.parent.parent
+        self._project_path = Path(__file__).parent.parent
         self._special_chars = ["Ä", "Ö", "Ü", "ä", "ö", "ü", "ß"]
+
+        self.create_cache()
 
     # define attributes as read-only
     @property
@@ -167,6 +169,7 @@ class RailDataImport:
         args: list[str | int | float],
         enhance_kilometrage: bool,
         cache_preprocessed_segments: bool,
+        only_use_cache: bool,
     ) -> list[TrackSegment]:
         ...
 
@@ -177,6 +180,7 @@ class RailDataImport:
         args: list[str | int | float],
         enhance_kilometrage: bool,
         cache_preprocessed_segments: bool,
+        only_use_cache: bool,
     ) -> TrackSegment:
         ...
 
@@ -187,6 +191,7 @@ class RailDataImport:
         args: list[str | int | float],
         enhance_kilometrage: bool,
         cache_preprocessed_segments: bool,
+        only_use_cache: bool,
     ) -> OperationalPoint:
         ...
 
@@ -197,6 +202,7 @@ class RailDataImport:
         args: list[str | int | float],
         enhance_kilometrage: bool,
         cache_preprocessed_segments: bool,
+        only_use_cache: bool,
     ) -> list[TrackSegment]:
         ...
 
@@ -207,6 +213,7 @@ class RailDataImport:
         args: list[str | int | float],
         enhance_kilometrage: bool,
         cache_preprocessed_segments: bool,
+        only_use_cache: bool,
     ) -> list[OperationalPoint]:
         ...
 
@@ -217,6 +224,7 @@ class RailDataImport:
         args: list[str | int | float],
         enhance_kilometrage: bool,
         cache_preprocessed_segments: bool,
+        only_use_cache: bool,
     ) -> list[OperationalPoint]:
         ...
 
@@ -227,6 +235,7 @@ class RailDataImport:
         args: list[str | int | float],
         enhance_kilometrage: bool,
         cache_preprocessed_segments: bool,
+        only_use_cache: bool,
     ) -> list[OperationalPoint | TrackSegment]:
         ...
 
@@ -237,6 +246,7 @@ class RailDataImport:
         args: list[str | int | float],
         enhance_kilometrage: bool,
         cache_preprocessed_segments: bool,
+        only_use_cache: bool,
     ) -> list[OperationalPoint | TrackSegment]:
         ...
 
@@ -261,6 +271,7 @@ class RailDataImport:
         args: list[str | int | float],
         enhance_kilometrage: bool = True,
         cache_preprocessed_segments: bool = True,
+        only_use_cache: bool = False,
     ) -> Union[TrackSegment, list[TrackSegment], OperationalPoint, list[OperationalPoint]]:
         """
         Queries for objects according to 'filter_name' and 'args'. Objects are read from cache, if possible. If the object does not exist in the cache, a query is sent to ISR, and the object is created from the response.
@@ -269,7 +280,7 @@ class RailDataImport:
         Parameters
         ----------
         filter_name: Literal
-            The type of filter to be applied. Choose from: TODO: Update
+            The type of filter to be applied. Choose from:
                 - 'EQUALS_TRACK': Query by track. 'args' is a tuple of (<track_nr>).
                 - 'EQUALS_OP': Query by operational point. 'args' is a tuple of (<name>, <track_nr>).
                 - 'EQUALS_TRACK_SEG': Query by track segment. 'args' is a tuple of (<track_nr>, <name>).
@@ -281,6 +292,10 @@ class RailDataImport:
 
         args: list
             A list of arguments corresponding to the chosen filter. The interpretation of arguments depends on the selected filter.
+        cache_preprocessed_segments: bool = True
+            Whether the processed track segments should be written to cache for faster loading in future runs.
+        only_use_cache: bool = False
+            If only track segments available in the cache should be used.
 
         Returns
         -------
@@ -321,17 +336,17 @@ class RailDataImport:
                     # extract name and skip if name was already read (skips double entries)
                     # check for exceptional names
                     name = track_seg['properties']['ISR_STRECKE_VON_BIS']
+                    name_ = name.replace('/', ' ')
+
                     if any([ex_name in name for ex_name in ISR_EXCEPTIONAL_STATION_NAMES]):
                         from_name, to_name = extract_station_names(track_name_string=name)
                         name = f'{from_name} - {to_name}'
-                    name_ = name.replace('/', ' ')
 
                     km_type = 'raw' if enhance_kilometrage == False else 'enh'
-                    file_path_1 = self.project_path / f'cache/track_segments/{track_nr}_{name}_{km_type}.pickle'
+                    file_path_1 = self.project_path / f'cache/track_segments/{track_nr}_{name_}_{km_type}.pickle'
                     file_path_2 = (
-                        self.project_path / f'cache/track_segments_continued/{track_nr}_{name}_{km_type}.pickle'
+                        self.project_path / f'cache/track_segments_continued/{track_nr}_{name_}_{km_type}.pickle'
                     )
-
                     if file_path_1.exists():
                         track_segment = self._track_segment_from_pickle(file_path=file_path_1)
 
@@ -473,8 +488,14 @@ class RailDataImport:
                         name = name.replace('/', '*')
 
                         km_type = 'raw' if enhance_kilometrage == False else 'enh'
-                        filepath = self.project_path / f'cache/track_segments/{track_nr}_{name}_{km_type}.pickle'
-                        matching_files = sorted(filepath.parent.glob(f'{track_nr}_{name}_{km_type}.pickle'))
+                        if int(track_nr) > 4929:
+                            filepath = (
+                                self.project_path / f'cache/track_segments_continued/{track_nr}_{name}_{km_type}.pickle'
+                            )
+                        else:
+                            filepath = self.project_path / f'cache/track_segments/{track_nr}_{name}_{km_type}.pickle'
+                        search_name = f'{track_nr}_{name}_{km_type}.pickle'
+                        matching_files = sorted(filepath.parent.glob(search_name.replace('**', '*')))
 
                         if len(matching_files) == 1:
                             filepath = matching_files[0]
@@ -486,19 +507,25 @@ class RailDataImport:
                             raise NotImplementedError('Not Implemented')
 
                         else:
-                            # query isr
-                            response = self.query_isr(filter_name='EQUALS_TRACK_SEG', args=[int(track_nr), str(name)])
+                            if only_use_cache == True:
+                                continue
 
-                            if response:
-                                logger.info(f'Preprocessing: {track_nr} {name}.')
-                                track_segment = self._track_segment_from_feature_isr(
-                                    isr_feature=response['features'][0],
-                                    enhance_kilometrage=enhance_kilometrage,
-                                    cache_preprocessed_segments=cache_preprocessed_segments,
-                                )
                             else:
-                                # request failed
-                                raise RequestException(f"An error occured while handling the request to ISR.")
+                                # query isr
+                                response = self.query_isr(
+                                    filter_name='EQUALS_TRACK_SEG', args=[int(track_nr), str(name)]
+                                )
+
+                                if response:
+                                    logger.info(f'Preprocessing: {track_nr} {name}.')
+                                    track_segment = self._track_segment_from_feature_isr(
+                                        isr_feature=response['features'][0],
+                                        enhance_kilometrage=enhance_kilometrage,
+                                        cache_preprocessed_segments=cache_preprocessed_segments,
+                                    )
+                                else:
+                                    # request failed
+                                    raise RequestException(f"An error occured while handling the request to ISR.")
 
                         # skip double track segments (direction / opposite rail contains same geometry)
                         if (name, track_nr) in names_and_track and track_segment.properties[
@@ -679,6 +706,22 @@ class RailDataImport:
         else:
             # request failed
             raise RequestException(f"Given response is None. Export aborted.")
+
+    def create_cache(self):
+        """Creates cache directory if not exist."""
+
+        cache_path = self.project_path / f'cache'
+        ts_cache_1_path = cache_path / f'track_segments'
+        ts_cache_2_path = cache_path / f'track_segments_continued'
+        op_cache_path = cache_path / f'operational_points'
+        temp_cache_path = cache_path / f'temp'
+
+        cache_path.mkdir(parents=True, exist_ok=True)
+        ts_cache_1_path.mkdir(parents=True, exist_ok=True)
+        ts_cache_2_path.mkdir(parents=True, exist_ok=True)
+        op_cache_path.mkdir(parents=True, exist_ok=True)
+        temp_cache_path.mkdir(parents=True, exist_ok=True)
+        return
 
     def _check_input_for_query(
         self,
@@ -1544,6 +1587,53 @@ class RailDataImport:
                     coords_epsg31467=(3795593, 6050510), properties=properties, properties_info=properties_info  #
                 )
 
+            elif 'Mülheim (Ruhr)-Speldorf, W 1' in name and len(name) == len('Mülheim (Ruhr)-Speldorf, W 1'):
+                operational_point = OperationalPoint(
+                    coords_epsg31467=(3795593, 6050510), properties=properties, properties_info=properties_info  #
+                )
+
+            elif 'StrUeb2321_2324' in name and len(name) == len('StrUeb2321_2324'):
+                operational_point = OperationalPoint(
+                    coords_epsg31467=(3346963, 5699054), properties=properties, properties_info=properties_info  #
+                )
+
+            elif 'Merklingen-Widderstall' in name and len(name) == len('Merklingen-Widderstall'):
+                operational_point = OperationalPoint(
+                    coords_epsg31467=(3551935, 5377118), properties=properties, properties_info=properties_info  #
+                )
+
+            elif 'Berlin-Schönholz                  S-Bahn' in name and len(name) == len(
+                'Berlin-Schönholz                  S-Bahn'
+            ):
+                operational_point = OperationalPoint(
+                    coords_epsg31467=(3796796, 5835721), properties=properties, properties_info=properties_info  #
+                )
+
+            elif 'StrUeb6402_6434' in name and len(name) == len('StrUeb6402_6434'):
+                operational_point = OperationalPoint(
+                    coords_epsg31467=(3679987, 5780679), properties=properties, properties_info=properties_info  #
+                )
+
+            elif 'Raitzhain Werkbahnhof' in name and len(name) == len('Raitzhain Werkbahnhof'):
+                operational_point = OperationalPoint(
+                    coords_epsg31467=(3726318, 5642076), properties=properties, properties_info=properties_info  #
+                )
+
+            elif 'Niederhone' in name and len(name) == len('Niederhone'):
+                operational_point = OperationalPoint(
+                    coords_epsg31467=(3570122, 5673985), properties=properties, properties_info=properties_info  #
+                )
+
+            elif 'StrUeb6772_6773' in name and len(name) == len('StrUeb6772_6773'):
+                operational_point = OperationalPoint(
+                    coords_epsg31467=(3813063, 6001961), properties=properties, properties_info=properties_info  #
+                )
+
+            elif 'StrUeb2600_2610' in name and len(name) == len('StrUeb2600_2610'):
+                operational_point = OperationalPoint(
+                    coords_epsg31467=(3356138, 5648106), properties=properties, properties_info=properties_info  #
+                )
+
             else:
                 # no match: error
                 raise ValueError(f"No operational point found with name = {name} for track = {track_nr}")
@@ -1712,7 +1802,10 @@ class RailDataImport:
             if n_elements == 0:
                 raise ValueError('No elements found')
             elif n_elements == 1:
-                raise ValueError(f'Found only one track but track type is {track_type}')
+                if track_type == 'auf Anfrage':
+                    properties_2 = None
+                else:
+                    raise ValueError(f'Found only one track but track type is {track_type}')
             else:
                 for element in response['features']:
                     if (
@@ -1763,9 +1856,7 @@ class RailDataImport:
         isr_original_lines_epsg31467 = MultiLineString(isr_feature['geometry']['coordinates'])
 
         # name of file with ops for track
-        track_ops_file_path = (
-            Path(__file__).parent.parent.parent.parent / f'cache/operational_points/ops_track_{track_nr}.json'
-        )
+        track_ops_file_path = Path(__file__).parent.parent / f'cache/operational_points/ops_track_{track_nr}.json'
 
         if not track_ops_file_path.exists():
             # query all operational points for track and write to cache

@@ -188,7 +188,7 @@ class TrackSegment:
 
         # paths
         km_type = 'raw' if enhance_kilometrage == False else 'enh'
-        self.project_path = Path(__file__).parent.parent.parent.parent
+        self.project_path = Path(__file__).parent.parent
         self.cache_path = self.project_path / f'cache/track_segments/{self.track_nr}_{self.name}_{km_type}.pickle'
 
         # compute layout of rails in both directions (and identify monorails) (example: [r0, (r1,2), (r3,r4)] -> direction 1: r0-r1-r3, direction 2: r4-r2-r0)

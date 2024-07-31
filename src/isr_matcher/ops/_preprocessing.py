@@ -584,7 +584,15 @@ class ISRPreprocessor:
                     k = index_exceeded[0]
                     merge_groups_index = [path[: k + 1], path[k + 1 :]]
                 else:
-                    raise ValueError('More than one gap in line group')
+                    # raise ValueError('More than one gap in line group')
+                    merge_groups_index = []
+                    for i in range(len(index_exceeded)):
+                        if i == 0:
+                            merge_groups_index.append(path[: index_exceeded[i] + 1])
+                        elif i == len(index_exceeded) - 1:
+                            merge_groups_index.append(path[index_exceeded[i] + 1 :])
+                        else:
+                            merge_groups_index.append(path[index_exceeded[i - 1] + 1 : index_exceeded[i] + 1])
 
             else:  # single line in merge group
                 merge_groups_index = merge_index

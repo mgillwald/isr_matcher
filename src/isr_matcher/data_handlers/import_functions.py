@@ -18,7 +18,7 @@ from copy import deepcopy
 # Type T: only instances of class BaseGeometry or subclasses (Point, Linestring, etc.)
 T = TypeVar("T", bound="BaseGeometry")
 
-project_path = Path(__file__).parent.parent.parent.parent
+project_path = Path(__file__).parent.parent
 
 
 def query_track_segment(
@@ -681,6 +681,53 @@ def op_from_file(
                 coords_epsg31467=(3795593, 6050510), properties=properties, properties_info=properties_info  #
             )
 
+        elif 'Mülheim (Ruhr)-Speldorf, W 1' in name and len(name) == len('Mülheim (Ruhr)-Speldorf, W 1'):
+            operational_point = OperationalPoint(
+                coords_epsg31467=(3795593, 6050510), properties=properties, properties_info=properties_info  #
+            )
+
+        elif 'StrUeb2321_2324' in name and len(name) == len('StrUeb2321_2324'):
+            operational_point = OperationalPoint(
+                coords_epsg31467=(3346963, 5699054), properties=properties, properties_info=properties_info  #
+            )
+
+        elif 'Merklingen-Widderstall' in name and len(name) == len('Merklingen-Widderstall'):
+            operational_point = OperationalPoint(
+                coords_epsg31467=(3551935, 5377118), properties=properties, properties_info=properties_info  #
+            )
+
+        elif 'Berlin-Schönholz                  S-Bahn' in name and len(name) == len(
+            'Berlin-Schönholz                  S-Bahn'
+        ):
+            operational_point = OperationalPoint(
+                coords_epsg31467=(3796796, 5835721), properties=properties, properties_info=properties_info  #
+            )
+
+        elif 'StrUeb6402_6434' in name and len(name) == len('StrUeb6402_6434'):
+            operational_point = OperationalPoint(
+                coords_epsg31467=(3679987, 5780679), properties=properties, properties_info=properties_info  #
+            )
+
+        elif 'Raitzhain Werkbahnhof' in name and len(name) == len('Raitzhain Werkbahnhof'):
+            operational_point = OperationalPoint(
+                coords_epsg31467=(3726318, 5642076), properties=properties, properties_info=properties_info  #
+            )
+
+        elif 'Niederhone' in name and len(name) == len('Niederhone'):
+            operational_point = OperationalPoint(
+                coords_epsg31467=(3570122, 5673985), properties=properties, properties_info=properties_info  #
+            )
+
+        elif 'StrUeb6772_6773' in name and len(name) == len('StrUeb6772_6773'):
+            operational_point = OperationalPoint(
+                coords_epsg31467=(3813063, 6001961), properties=properties, properties_info=properties_info  #
+            )
+
+        elif 'StrUeb2600_2610' in name and len(name) == len('StrUeb2600_2610'):
+            operational_point = OperationalPoint(
+                coords_epsg31467=(3356138, 5648106), properties=properties, properties_info=properties_info  #
+            )
+
         else:
             # no match: error
             raise ValueError(f"No operational point found with name = {name} for track = {track_nr}")
@@ -769,9 +816,7 @@ def track_segment_from_json_dict(
     track_nr = properties['ISR_STRE_NR']
 
     # name of file with ops for track
-    track_ops_file_path = (
-        Path(__file__).parent.parent.parent.parent / f'cache/operational_points/ops_track_{track_nr}.json'
-    )
+    track_ops_file_path = Path(__file__).parent.parent / f'cache/operational_points/ops_track_{track_nr}.json'
 
     if not track_ops_file_path.exists():
         # query all operational points for track and write to cache

@@ -6,6 +6,7 @@ from shapely.geometry import Point, LineString
 import numpy as np
 from isr_matcher.ops._functions import angle_between, split_line_at_point
 from isr_matcher._constants._parse import db_km_to_km
+from isr_matcher._constants._properties import ISR_PROPERTIES_TRACK_SEGMENTS
 from isr_matcher.data_handlers.transformer import Transformer
 from shapely.ops import nearest_points
 from typing import Tuple, Literal
@@ -112,22 +113,25 @@ class MMPostprocessor:
                     segment = path_by_rails[i]
                     no_split = True
                 if no_split == False:
-                    segment1, segment2 = split_line_at_point(path_by_rails[i], new_split_point)
+                    try:
+                        segment1, segment2 = split_line_at_point(path_by_rails[i], new_split_point)
 
-                    if distance > 0:
-                        segment = segment2
-                    else:
-                        segment = segment1
+                        if distance > 0:
+                            segment = segment2
+                        else:
+                            segment = segment1
+                    except:
+                        segment = path_by_rails[i]
 
             # check if next segment has opposite direction
             # if it has, skip segment if next segment after is very close (to avoid running backwards)
-            elif (split_postion <= 1e-3 and split_postion_pre >= 1 - 1e-3) or (
-                split_postion_pre <= 1e-3 and split_postion >= 1 - 1e-3
-            ):
-                if path_by_rails[i - 1].distance(path_by_rails[i + 1]) <= 10:
-                    continue
-                else:
-                    segment = path_by_rails[i]
+            # elif (split_postion <= 1e-3 and split_postion_pre >= 1 - 1e-3) or (
+            #    split_postion_pre <= 1e-3 and split_postion >= 1 - 1e-3
+            # ):
+            #    if path_by_rails[i - 1].distance(path_by_rails[i + 1]) <= 10:
+            #        continue
+            #    else:
+            #        segment = path_by_rails[i]
 
             else:
                 segment = path_by_rails[i]
@@ -234,7 +238,13 @@ class MMPostprocessor:
         else:
             return LineString(list(line1.coords) + list(line2.coords))
 
-    def compute_position_parameter(self, path: LineString, rail_sequence: list[Rail], gnss_coords: list[Point]):
+    def compute_position_parameter(
+        self,
+        path: LineString,
+        rail_sequence: list[Rail],
+        gnss_coords: list[Point],
+        add_property_to_results: list[str] | None = None,
+    ):
         """
         Fucntion to compute positional parameters in track space (track_nr, dircetion, kilometrage and projected gnss coordinates).
 
@@ -246,6 +256,8 @@ class MMPostprocessor:
             List of rails. Each entry is the assigned rail for corresponding GNSS measurment.
         gnss_coords: list[Point]
             The GNSS measurements in UTM coordinate system (EPSG:31467).
+        add_property_to_results: list[str] | None = None
+            A list of property keys to be included in the results csv file as column. Optional, by default no properites are addeded.
 
         Note
         ----
@@ -254,6 +266,7 @@ class MMPostprocessor:
         """
 
         # compute kilometrage and projections on path
+        names = []
         matched_points_utm = []
         matched_points_wgs = []
         kms_db = []
@@ -263,6 +276,8 @@ class MMPostprocessor:
         rails = []
         gnss_error_m = []
         inclines = []
+        if add_property_to_results:
+            property_list = [[] for i in range(len(add_property_to_results))]
         for i, (opt_rail, point) in enumerate(zip(rail_sequence, gnss_coords)):
             # projection on path
             matched_point_utm = nearest_points(path, point)[0]
@@ -285,6 +300,9 @@ class MMPostprocessor:
                 if (int(opt_rail.track) == int(track_segment.track_nr)) and (
                     opt_rail.track_segment_name == track_segment.name
                 ):
+                    # name
+                    names.append(opt_rail.track_segment_name)
+
                     # get km
                     if track_segment.kilometrage.n_lines == 2 and opt_rail.direction == 0:
                         if len(directions) > 0 and not np.isnan(directions[-1]):
@@ -309,6 +327,22 @@ class MMPostprocessor:
                         case _:
                             raise ValueError('Unknown rail direction.')
                     rails.append(rail_type)
+
+                    if add_property_to_results:
+                        # add aditional parameters
+                        for n_p, property_ in enumerate(add_property_to_results):
+                            # assert property exists
+                            property_error_msg = (
+                                f"Unknown property passed in input: {property_}. ",
+                                f"For a list of all properties, see properties.py",
+                            )
+                            assert property_ in ISR_PROPERTIES_TRACK_SEGMENTS.keys(), property_error_msg
+
+                            if rail_type == 'eingleisig' or rail_type == 'Richtungsgleis':
+                                property_list[n_p].append(track_segment.properties[property_])
+
+                            else:
+                                property_list[n_p].append(track_segment.properties_2[property_])
 
                     # running km: distances are computed based on path geometry, not by kilometrage values
                     if i > 0:
@@ -384,6 +418,7 @@ class MMPostprocessor:
 
         position_parameter_dict = {
             'track_numbers': [int(rail.track) for rail in rail_sequence],
+            'names': names,
             'rail_types': rails,
             'directions': directions,
             'kms': kms,
@@ -394,6 +429,9 @@ class MMPostprocessor:
             'gnss_error_m': gnss_error_m,
             'inclines': inclines,
         }
+        if add_property_to_results:
+            for property_, value_list in zip(add_property_to_results, property_list):
+                position_parameter_dict[property_] = value_list
 
         return position_parameter_dict
 
@@ -675,15 +713,15 @@ class MMPostprocessor:
                 sub_list_tsn.append(track_segment_names[i])
 
             elif (not np.isnan(inclines[i - 1])) and np.isnan(inclines[i]):  # break
-                sub_list_kms.append(kms[i])
-                sub_list_inc.append(inclines[i])
-                sub_list_tsn.append(track_segment_names[i])
                 kms_splitted.append(sub_list_kms)
                 inc_splitted.append(sub_list_inc)
                 tsn_splitted.append(sub_list_tsn)
                 sub_list_kms = []
                 sub_list_inc = []
                 sub_list_tsn = []
+                sub_list_kms.append(kms[i])
+                sub_list_inc.append(inclines[i])
+                sub_list_tsn.append(track_segment_names[i])
 
             elif (np.isnan(inclines[i - 1])) and not np.isnan(inclines[i]):  # break
                 kms_splitted.append(sub_list_kms)

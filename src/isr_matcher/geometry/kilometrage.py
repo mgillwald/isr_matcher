@@ -102,12 +102,12 @@ class Kilometrage:
         return self._n_km_lines
 
     @property
-    def length_m(self) -> list[list[float]]:
+    def length_m(self) -> list[float]:
         """Returns the geometric length of kilometrage lines in meter."""
         return self._length
 
     @property
-    def length_km(self) -> list[list[float]]:
+    def length_km(self) -> list[float]:
         """Returns the geometric length of kilometrage lines in kilometer."""
         return [l / 1000 for l in self._length]
 

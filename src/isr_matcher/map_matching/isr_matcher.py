@@ -59,6 +59,7 @@ class ISRMatcher:
         export_results: bool = True,
         enhance_kilometrage: bool = True,
         cache_preprocessed_segments: bool = True,
+        only_use_cache: bool = False,
     ):
         """Initializes the ISRMatcher class.
 
@@ -78,6 +79,8 @@ class ISRMatcher:
             Determines whether to enhance kilometrage, by default True.
         cache_preprocessed_segments : bool, optional
             Determines whether to cache preprocessed segments, by default True.
+        only_use_cache: bool = False
+            If only track segments available in the cache should be used.
         """
 
         self._project_path = Path(__file__).parent.parent.parent.parent  # path to root of project
@@ -87,6 +90,7 @@ class ISRMatcher:
             gnss=gnss_series,
             enhance_kilometrage=enhance_kilometrage,
             cache_preprocessed_segments=cache_preprocessed_segments,
+            only_use_cache=only_use_cache,
         )  # query map and set self._map
         self._preprocessor = MMPreprocessor(  # create preprocessor instance
             map_data=self.map,
@@ -137,9 +141,26 @@ class ISRMatcher:
         """Returns the postprocessor instance."""
         return self._postprocessor
 
-    def query_map(self, gnss: GNSSSeries, enhance_kilometrage: bool = True, cache_preprocessed_segments: bool = True):
+    def query_map(
+        self,
+        gnss: GNSSSeries,
+        enhance_kilometrage: bool = True,
+        cache_preprocessed_segments: bool = True,
+        only_use_cache: bool = False,
+    ):
         """
         Query ISR for all elements within a boundary around GNSS measurements.
+
+        Parameters
+        ----------
+        gnss: GNSSSeries
+            The instance containing GNSS data.
+        enhance_kilometrage : bool
+            Flag indicating whether to enhance kilometrage, by default True.
+        cache_preprocessed_segments: bool = True
+            Whether the processed track segments should be written to cache for faster loading in future runs.
+        only_use_cache: bool = False
+            If only track segments available in the cache should be used.
 
         Returns
         -------
@@ -157,6 +178,7 @@ class ISRMatcher:
             args=[boundary_string],
             enhance_kilometrage=enhance_kilometrage,
             cache_preprocessed_segments=cache_preprocessed_segments,
+            only_use_cache=only_use_cache,
         )
 
         # set map attribute
@@ -230,6 +252,7 @@ class ISRMatcher:
         sigma: float | ArrayLike | None = None,
         prune: float | Literal['auto'] | None = None,
         sigma_method: Literal['std'] | Literal['mad'] = 'std',
+        add_property_to_results: list[str] | None = None,
         path_resolution_m: float = 5,
         average_low_velocity: bool = True,
         threshold_velocity: float = 3.0,
@@ -248,6 +271,8 @@ class ISRMatcher:
             Prune parameter, by default None.
         sigma_method : {'std', 'mad'}, optional
             Method to estimate sigma, by default 'std'.
+        add_property_to_results: list[str] | None = None
+            A list of property keys to be included in the results csv file as column. Optional, by default no properites are addeded.
         path_resolution_m : float, optional
             Spacing between points of computed path of train in meter, by default 5.
         average_low_velocity : bool, optional
@@ -322,6 +347,7 @@ class ISRMatcher:
             path=path,
             rail_sequence=rail_sequence,
             gnss_coords=self.gnss.coords_utm,
+            add_property_to_results=add_property_to_results,
         )
 
         # prune timesteps with wrong direction (direction changes for a single timestep)
@@ -391,6 +417,7 @@ class ISRMatcher:
             'x_epsg31467': [point.x for point in position_dict['matched_coordinates_utm']],
             'y_epsg31467': [point.y for point in position_dict['matched_coordinates_utm']],
             'track_number': position_dict['track_numbers'],
+            'name': position_dict['names'],
             'km': position_dict['kms'],
             'km_db': position_dict['kms_db'],
             'km_running': position_dict['kms_running'],
@@ -411,6 +438,11 @@ class ISRMatcher:
             else len(self.gnss) * [np.nan],
             'acceleration_computed_ms2': acceleration_ms2,
         }
+        # add properties to results
+        if add_property_to_results:
+            for property_ in add_property_to_results:
+                df_dict[property_] = position_dict[property_]
+        # create and save results data frame
         df_results = pd.DataFrame(data=df_dict)
         if self.export_results == True:
             df_results.to_csv(self.export_path / 'results.csv')

@@ -20,6 +20,7 @@ def matching(
     export_path: Path | str,  # path to export directory (where results will be written)
     csv_path: Path | str,  # path to input csv file with gnss times and coordinates
     column_name_dict: dict | None,  # specifies the column names of the input csv file
+    add_property_to_results: list[str] | None = None,  # properties to be included in result csv file
     r: float = 1500.0,  # search radius around gnss measurements
     sigma: float | None = None,  # estimate of the gnss error (standard deviation)
     prune: Literal['auto'] | float | None = 'auto',  # pruning strategy for input gnss trajectory
@@ -31,6 +32,7 @@ def matching(
     skiprows: int = 0,  # sets number of rows to skip from start of input csv file
     correct_velocity: bool = True,  # if computed velocity should be corrected for track incline
     cache_preprocessed_segments: bool = True,  # if to cache preprocessed track segments
+    only_use_cache: bool = False,  # if only cached track segemnts should be used for map matching
 ) -> None:
     """The main function of the package. Performs map matching and post-analysis. Results are written to directory specified by 'export_path'.
 
@@ -54,6 +56,8 @@ def matching(
             }
 
         The name of latitude, longitude and of one time column must be given. The rest (inclduing one time column) can be set to None, if the corrsponding information is missing in the input file.
+    add_property_to_results: list[str] | None = None
+        A list of property keys to be included in the results csv file as column. Optional, by default no properites are addeded.
     r: float = 1500
         Optional. Defines the search radius around the input gnss trajectory, in meter. All elements in this radius will be queried from ISR. If not set, this defaults to 1.5 km.
     sigma: float | None = None
@@ -74,6 +78,8 @@ def matching(
         Sets number of rows to skip from start of input csv file.
     correct_velocity: bool = True
         Sets if the computed velocities should be corrected for track incline. Defaults to True.
+    only_use_cache: bool = False
+        If only track segments available in the cache should be used.
 
     Raises
     ------
@@ -94,6 +100,7 @@ def matching(
         r_boundary=r,
         r_candidates=200,
         cache_preprocessed_segments=cache_preprocessed_segments,
+        only_use_cache=only_use_cache,
     )
 
     # ISR Map Matching
@@ -107,9 +114,8 @@ def matching(
         sigma_method=sigma_method,
         create_plots=create_plots,
         correct_velocity=correct_velocity,
+        add_property_to_results=add_property_to_results,
     )
-    # except:
-    #    return_code = -1
 
     if return_code != 0:
         raise ValueError(
